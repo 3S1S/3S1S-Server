@@ -1,8 +1,12 @@
 asgiref==3.4.1
+bcrypt==3.2.0
+cffi==1.15.0
 Django==3.2.9
 django-filter==21.1
 djangorestframework==3.12.4
 Markdown==3.3.4
 mysqlclient==2.0.3
+pycparser==2.21
 pytz==2021.3
+six==1.16.0
 sqlparse==0.4.2
