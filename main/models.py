@@ -44,7 +44,7 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = 'Notification'
-        unique_together = (('project', 'invitee'),)
+        unique_together = (('project_id', 'invitee'),)
 
 
 class Schedule(models.Model):
@@ -95,7 +95,7 @@ class Participant(models.Model):
     class Meta:
         managed = False
         db_table = 'Participant'
-        unique_together = (('todo', 'user'),)
+        unique_together = (('todo_id', 'user_id'),)
 
 
 class Comment(models.Model):
