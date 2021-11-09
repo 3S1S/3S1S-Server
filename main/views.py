@@ -9,10 +9,11 @@ from rest_framework import generics
 
 import json
 import bcrypt
+import jwt
 
 from main.models import User
 from main.serializer import UserSerializer
-
+from config import SECRET_KEY 
 # Create your views here.
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
@@ -42,4 +43,30 @@ class SignUp(View):
         except KeyError:
             return JsonResponse({"status": 400, "message" : "Invalid Value"}, status = 400)
 
-            
+class SignIn(View):
+    @csrf_exempt
+    def post(self, request):
+        data = json.loads(request.body)
+
+        try: 
+            if data['id'] == "" or data['password'] == "":
+                return JsonResponse({"message": "Please fill in the required items."}, status = 400) 
+
+            if User.objects.filter(id = data['id']).exists():
+                user = User.objects.get(id = data['id'])
+
+     
+
+                if bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
+                    token = user.id
+                    return JsonResponse({'token' : token}, status=200)
+
+                return JsonResponse({"message" : "Wrong Password"}, status = 201)
+              
+            return JsonResponse({"message": "Unexist ID"}, status = 202)
+
+
+
+        except KeyError:
+
+            return JsonResponse({"message" : "Invalid Value"}, status = 401)
