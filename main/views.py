@@ -31,20 +31,20 @@ class SignUp(View):
             
             # ID 중복
             if User.objects.filter(id = data['id']).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.'}, status = 401)
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.'}, status = 400)
             
             # 비밀번호 재입력 불일치
             if data['password'] != data['password_check']:
-                return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 402)
+                return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 400)
 
             # 이메일 중복
             if User.objects.filter(email = data['email']).exists():
-                return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 403)
+                return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 400)
             else: # 이메일 형식 오류
                 regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
                 mo = regex.search(data['email'])
                 if mo == None:
-                    return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 403)
+                    return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 400)
             
             User.objects.create(
                 id = data['id'],
@@ -53,7 +53,7 @@ class SignUp(View):
                 email = data['email']
             ).save()
 
-            return JsonResponse({'message' : '회원가입 성공'}, status = 200)
+            return JsonResponse({'message' : '회원가입 성공'}, status = 201)
 
         except json.JSONDecodeError as e :
             return JsonResponse({"status": 400, 'message': f'Json_ERROR:{e}'}, status = 400)
