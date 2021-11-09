@@ -1,6 +1,6 @@
 from django.db import models
 
-class User(models.Model):
+class User(models.Model):   
     id = models.CharField(primary_key=True, max_length=20)
     password = models.CharField(max_length=100)
     name = models.CharField(max_length=10)
@@ -25,8 +25,8 @@ class Project(models.Model):
 
 
 class Member(models.Model):
-    project = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
-    user = models.ForeignKey('User', models.DO_NOTHING)
+    project_id = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
+    user_id = models.ForeignKey('User', models.DO_NOTHING)
     leader = models.IntegerField(blank=True, null=True)
     contribution_rate = models.FloatField(blank=True, null=True)
 
@@ -36,7 +36,7 @@ class Member(models.Model):
 
 
 class Notification(models.Model):
-    project = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
+    project_id = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
     invitee = models.ForeignKey('User', models.DO_NOTHING, db_column='invitee', related_name='invitee')
     inviter = models.ForeignKey('User', models.DO_NOTHING, db_column='inviter', related_name='inviter')
     invite_date = models.DateTimeField()
@@ -48,7 +48,7 @@ class Notification(models.Model):
 
 
 class Schedule(models.Model):
-    project = models.ForeignKey(Project, models.DO_NOTHING)
+    project_id = models.ForeignKey(Project, models.DO_NOTHING)
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
@@ -61,7 +61,7 @@ class Schedule(models.Model):
 
 
 class File(models.Model):
-    project = models.ForeignKey('Project', models.DO_NOTHING)
+    project_id = models.ForeignKey('Project', models.DO_NOTHING)
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
@@ -75,7 +75,7 @@ class File(models.Model):
 
 
 class Todo(models.Model):
-    project = models.ForeignKey(Project, models.DO_NOTHING)
+    project_id = models.ForeignKey(Project, models.DO_NOTHING)
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
@@ -89,8 +89,8 @@ class Todo(models.Model):
 
 
 class Participant(models.Model):
-    todo = models.OneToOneField('Todo', models.DO_NOTHING, primary_key=True)
-    user = models.ForeignKey('User', models.DO_NOTHING)
+    todo_id = models.OneToOneField('Todo', models.DO_NOTHING, primary_key=True)
+    user_id = models.ForeignKey('User', models.DO_NOTHING)
 
     class Meta:
         managed = False
@@ -99,7 +99,7 @@ class Participant(models.Model):
 
 
 class Comment(models.Model):
-    todo = models.ForeignKey('Todo', models.DO_NOTHING)
+    todo_id = models.ForeignKey('Todo', models.DO_NOTHING)
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     content = models.TextField()
     create_at = models.CharField(max_length=45)
