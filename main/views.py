@@ -154,22 +154,37 @@ class MemberList(generics.ListCreateAPIView):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
           
- # 프로젝트
-class Notification(generics.ListCreateAPIView):
+class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
 
     def create(self, request, *args, **kwargs):
-        # request에서 body 뽑아오기
-        byte_str = request.body
-        dict_str = byte_str.decode("UTF-8")
-        data = eval(repr(ast.literal_eval(dict_str)))
-        
-        # 뽑아온 body에 원하는 작업 수행
-        data['invite_date'] = str(datetime.datetime.now())
-        
-        # 수행 결과를 다시 request에 반영
-        data = json.dumps(data, indent=4).encode('utf-8')
-        request.body = data
 
-        return super().create(request, *args, **kwargs)
+        try:
+            # request에서 body 뽑아오기
+            byte_str = request.body
+            dict_str = byte_str.decode("UTF-8")
+            data = eval(repr(ast.literal_eval(dict_str)))
+            
+            #이미 알림을 보냈을 경우 
+            if Notification.objects.filter(project = data['project'], invitee = data['invitee']).exists() :
+                return JsonResponse({"message" : "이미 알림을 보냈습니다"}, status = 210)
+            
+            #이미 멤버로 참여 하고 있을 경우 
+            if Member.objects.filter(project = data['project'], user = data['invitee']).exists() :
+                return JsonResponse({"message" : "이미 멤버로 참여하고 있습니다."}, status = 210)
+            
+            # 뽑아온 body에 원하는 작업 수행
+            data['invite_date'] = str(datetime.datetime.now())
+            
+            # 수행 결과를 다시 request에 반영
+            data = json.dumps(data, indent=4).encode('utf-8')
+            request.body = data
+
+            #성공시 status 201
+            return super().create(request, *args, **kwargs)
+    
+        except json.JSONDecodeError as e :
+                return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+                return JsonResponse({'message' : 'Invalid Value'}, status = 500)
