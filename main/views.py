@@ -27,8 +27,8 @@ class SignUp(View):
 
         try:
             # 필수항목 미입력
-            for val in data.values():
-                if val == "":
+            for key, val in data.items():
+                if val == "" and key != 'belong':
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =400)
             
             # 비밀번호 재입력 불일치
@@ -49,7 +49,8 @@ class SignUp(View):
                 id = data['id'],
                 password = bcrypt.hashpw(data['password'].encode("UTF-8"), bcrypt.gensalt()).decode("UTF-8"),
                 name = data['name'],
-                email = data['email']
+                email = data['email'],
+                belong = data['belong']
             ).save()
 
             return JsonResponse({'message' : '회원가입 성공'}, status = 201)
