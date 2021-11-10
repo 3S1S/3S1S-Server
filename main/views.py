@@ -90,11 +90,11 @@ class SignIn(View):
 
 class CheckID(View):
     def get(self,request):
-        data = json.loads(request.body)
+        id = request.GET.get('id', None)
         
         try:
             # ID 중복
-            if User.objects.filter(id = data['id']).exists():
+            if User.objects.filter(id = id).exists():
                 return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 400)
             else: 
                 return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
