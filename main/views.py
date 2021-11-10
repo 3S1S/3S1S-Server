@@ -1,22 +1,28 @@
+from django.db.models import query
+from django.db.models.query import QuerySet
+from django.db.models.query_utils import Q
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-
 from django.views import View
+
+from rest_framework.serializers import Serializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 
-import json
+import json, ast
 import bcrypt
 import re
+import datetime 
 import jwt
 import datetime
 import ast
 
-from main.models import Project, User, Notification
-from main.serializer import NotificationSerializer, ProjectSerializer, UserSerializer
+
+from main.models import Project, User, Member, Notification
+from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
 from config import SECRET_KEY 
 
 # Create your views here.
@@ -66,6 +72,7 @@ class SignUp(View):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
+
 class SignIn(View):
     @csrf_exempt
     def post(self, request):
@@ -101,18 +108,53 @@ class CheckID(View):
                 return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 210)
             else: 
                 return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
+
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-# 프로젝트
-class Project(generics.ListCreateAPIView):
+
+class ProjectList (generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    
+class MemberList(generics.ListCreateAPIView):
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
+    
+    def create(self, request, *args, **kwargs):
+        # request에서 body 뽑아오기
+        byte_str = request.body
+        dict_str = byte_str.decode("UTF-8")
+        data = eval(repr(ast.literal_eval(dict_str)))
+        
+        try:
+            #중복된 멤버
+            if Member.objects.filter(project = data['project'], user = data['user']).exists() :
+                return JsonResponse({"message" : "이미 멤버로 참여하고 있습니다."}, status = 210)
 
+            #해당 학생이 없을 때
+            if not User.objects.filter(id = data['user']).exists():
+                return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
 
+            # 중복된 리더 
+            if data['leader']== 1:
+                if Member.objects.filter(project = data['project'], leader = data['leader']).exists():
+                    return JsonResponse({"message" : "리더가 이미 있습니다."}, status = 210)
+
+            # 성공했을 때 
+            # 성공 status 201
+            return super().create(request, *args, **kwargs)
+            
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+
+          
+ # 프로젝트
 class Notification(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
@@ -122,7 +164,7 @@ class Notification(generics.ListCreateAPIView):
         byte_str = request.body
         dict_str = byte_str.decode("UTF-8")
         data = eval(repr(ast.literal_eval(dict_str)))
-
+        
         # 뽑아온 body에 원하는 작업 수행
         data['invite_date'] = str(datetime.datetime.now())
         

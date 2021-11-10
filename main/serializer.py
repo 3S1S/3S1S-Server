@@ -28,12 +28,12 @@ class ProjectSerializer(serializers.ModelSerializer):
 class MemberSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'project_id',
-            'user_id',
+            'project',
+            'user',
             'leader',
             'contribution_rate'
         )
-        moedel = Member
+        model = Member
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,7 +49,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'project_id',
+            'project',
             'writer',
             'title',
             'description',
@@ -61,7 +61,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
 class FileSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'project_id',
+            'project',
             'writer',
             'title',
             'description',
@@ -74,7 +74,7 @@ class FileSerializer(serializers.ModelSerializer):
 class TodoSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'project_id',
+            'project',
             'writer',
             'title',
             'description',
@@ -88,15 +88,15 @@ class TodoSerializer(serializers.ModelSerializer):
 class ParticipantSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'todo_id',
-            'user_id'
+            'todo',
+            'user'
         )
         model = Participant
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'todo_id',
+            'todo',
             'writer',
             'content',
             'create_at'

@@ -11,7 +11,12 @@ urlpatterns = [
     path('checkid',views.CheckID.as_view()),   
 
     # 프로젝트
-    path('project',views.Project.as_view()),
+    path('project',views.ProjectList.as_view()),
+    
+    # 멤버
+    path('member',views.MemberList.as_view()),
 
+    # 알림
     path('notification',views.Notification.as_view())
+
 ]
