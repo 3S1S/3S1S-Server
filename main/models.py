@@ -5,7 +5,7 @@ class User(models.Model):
     password = models.CharField(max_length=100)
     name = models.CharField(max_length=10)
     email = models.CharField(unique=True, max_length=30)
-
+    belong = models.CharField(max_length=45, blank=True, null=True)
     class Meta:
         managed = False
         db_table = 'User'
@@ -33,6 +33,7 @@ class Member(models.Model):
     class Meta:
         managed = False
         db_table = 'Member'
+        unique_together = (('project', 'user'),)
 
 
 class Notification(models.Model):
