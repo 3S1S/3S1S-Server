@@ -11,5 +11,7 @@ urlpatterns = [
     path('checkid',views.CheckID.as_view()),   
 
     # 프로젝트
-    path('project',views.Project.as_view())
+    path('project',views.Project.as_view()),
+
+    path('notification',views.Notification.as_view())
 ]

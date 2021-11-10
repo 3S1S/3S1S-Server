@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from django.views import View
+from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics
 
@@ -11,9 +12,11 @@ import json
 import bcrypt
 import re
 import jwt
+import datetime
+import ast
 
-from main.models import Project, User
-from main.serializer import ProjectSerializer, UserSerializer
+from main.models import Project, User, Notification
+from main.serializer import NotificationSerializer, ProjectSerializer, UserSerializer
 from config import SECRET_KEY 
 
 # Create your views here.
@@ -56,7 +59,7 @@ class SignUp(View):
                 belong = data['belong']
             ).save()
 
-            return JsonResponse({'message' : '회원가입 성공'}, status = 200)
+            return JsonResponse({'message' : '회원가입 성공'}, status = 201)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -67,7 +70,7 @@ class SignIn(View):
     @csrf_exempt
     def post(self, request):
         data = json.loads(request.body)
-
+        
         try: 
             if data['id'] == "" or data['password'] == "":
                 return JsonResponse({"message": "Please fill in the required items."}, status = 210) 
@@ -108,3 +111,23 @@ class CheckID(View):
 class Project(generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+
+
+class Notification(generics.ListCreateAPIView):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+
+    def create(self, request, *args, **kwargs):
+        # request에서 body 뽑아오기
+        byte_str = request.body
+        dict_str = byte_str.decode("UTF-8")
+        data = eval(repr(ast.literal_eval(dict_str)))
+
+        # 뽑아온 body에 원하는 작업 수행
+        data['invite_date'] = str(datetime.datetime.now())
+        
+        # 수행 결과를 다시 request에 반영
+        data = json.dumps(data, indent=4).encode('utf-8')
+        request.body = data
+
+        return super().create(request, *args, **kwargs)

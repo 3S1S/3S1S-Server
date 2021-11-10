@@ -37,7 +37,7 @@ class Member(models.Model):
 
 
 class Notification(models.Model):
-    project_id = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
+    project = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
     invitee = models.ForeignKey('User', models.DO_NOTHING, db_column='invitee', related_name='invitee')
     inviter = models.ForeignKey('User', models.DO_NOTHING, db_column='inviter', related_name='inviter')
     invite_date = models.DateTimeField()
@@ -45,7 +45,7 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = 'Notification'
-        unique_together = (('project_id', 'invitee'),)
+        unique_together = (('project', 'invitee'),)
 
 
 class Schedule(models.Model):
