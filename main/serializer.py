@@ -19,7 +19,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'team',
             'description',
             'subject',
-            'prupose',
+            'purpose',
             'progress_rate'
         )
         model = Project

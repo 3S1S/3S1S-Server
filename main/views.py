@@ -12,8 +12,8 @@ import bcrypt
 import re
 import jwt
 
-from main.models import User
-from main.serializer import UserSerializer
+from main.models import Project, User
+from main.serializer import ProjectSerializer, UserSerializer
 from config import SECRET_KEY 
 
 # Create your views here.
@@ -83,9 +83,11 @@ class SignIn(View):
                 return JsonResponse({"message" : "Wrong Password"}, status = 201)
               
             return JsonResponse({"message": "Unexist ID"}, status = 202)
-
-
-
         except KeyError:
 
             return JsonResponse({"message" : "Invalid Value"}, status = 401)
+
+
+class Project(generics.ListCreateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
