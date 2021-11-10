@@ -10,5 +10,11 @@ urlpatterns = [
     path('signin',views.SignIn.as_view()),
 
     # 프로젝트
-    path('project',views.Project.as_view())
+    path('project',views.ProjectList.as_view()),
+    
+    # 멤버
+    path('member',views.MemberList.as_view()),
+
+
+    
 ]

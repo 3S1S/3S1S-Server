@@ -1,19 +1,24 @@
+from django.db.models import query
+from django.db.models.query import QuerySet
+from django.db.models.query_utils import Q
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from django.views import View
+from rest_framework.serializers import Serializer
 from rest_framework.views import APIView
 from rest_framework import generics
 
-import json
+import json, ast
 import bcrypt
 import re
+import datetime 
 import jwt
 
-from main.models import Project, User
-from main.serializer import ProjectSerializer, UserSerializer
+from main.models import Project, User, Member, Notification
+from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
 from config import SECRET_KEY 
 
 # Create your views here.
@@ -62,6 +67,7 @@ class SignUp(View):
             return JsonResponse({"status": 400, "message" : "Invalid Value"}, status = 400)
 
 
+
 class SignIn(View):
     @csrf_exempt
     def post(self, request):
@@ -74,7 +80,6 @@ class SignIn(View):
             if User.objects.filter(id = data['id']).exists():
                 user = User.objects.get(id = data['id'])
 
-     
 
                 if bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
                     token = user.id
@@ -88,6 +93,42 @@ class SignIn(View):
             return JsonResponse({"message" : "Invalid Value"}, status = 401)
 
 
-class Project(generics.ListCreateAPIView):
+class ProjectList (generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    
+class MemberList(generics.ListCreateAPIView):
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
+    
+    def create(self, request, *args, **kwargs):
+            # request에서 body 뽑아오기
+        byte_str = request.body
+        dict_str = byte_str.decode("UTF-8")
+        data = eval(repr(ast.literal_eval(dict_str)))
+
+        try:
+            #중복된 멤버
+            if Member.objects.filter(project = data['project'], user = data['user']).exists() :
+                return JsonResponse({"message" : "이미 멤버로 참여하고 있습니다."}, status = 210)
+        
+            #해당 학생이 없을 때
+            if not User.objects.filter(id = data['user']).exists():
+                return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
+
+            # 중복된 리더 
+            if data['leader']== 1:
+                if Member.objects.filter(project = data['project'], leader = data['leader']).exists():
+                    return JsonResponse({"message" : "리더가 이미 있습니다."}, status = 210)
+
+            # 성공했을 때 
+            # 성공 status 201
+            return super().create(request, *args, **kwargs)
+            
+        except KeyError:
+
+            return JsonResponse({"message" : "Invalid Value"}, status = 401)
+        
+
+        
+    
