@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
+            'id',
             'title',
             'team',
             'description',
@@ -37,7 +38,7 @@ class MemberSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
-            'project_id',
+            'project',
             'invitee',
             'inviter',
             'invite_date'
