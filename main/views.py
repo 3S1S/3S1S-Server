@@ -35,27 +35,27 @@ class SignUp(View):
         data = json.loads(request.body)
 
         try:
-            # 필수항목 미입력
-            for key, val in data.items():
-                if val == "" and key != 'belong':
-                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
+            # # 필수항목 미입력
+            # for key, val in data.items():
+            #     if val == "" and key != 'belong':
+            #         return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
             
-            if not data['is_valid']:
-                return JsonResponse({'message' : 'ID 중복 확인을 수행해주세요.'}, status =210)
+            # if not data['is_valid']:
+            #     return JsonResponse({'message' : 'ID 중복 확인을 수행해주세요.'}, status =210)
 
-            # 비밀번호 재입력 불일치
-            if data['password'] != data['password_check']:
-                return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 210)
+            # # 비밀번호 재입력 불일치
+            # if data['password'] != data['password_check']:
+            #     return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 210)
 
-            # 이메일 중복
-            if User.objects.filter(email = data['email']).exists():
-                return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 210)
+            # # 이메일 중복
+            # if User.objects.filter(email = data['email']).exists():
+            #     return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 210)
             
-            else: # 이메일 형식 오류
-                regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
-                mo = regex.search(data['email'])
-                if mo == None:
-                    return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 210)
+            # else: # 이메일 형식 오류
+            #     regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
+            #     mo = regex.search(data['email'])
+            #     if mo == None:
+            #         return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 210)
             
             User.objects.create(
                 id = data['id'],
