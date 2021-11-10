@@ -56,7 +56,7 @@ class SignUp(View):
                 belong = data['belong']
             ).save()
 
-            return JsonResponse({'message' : '회원가입 성공'}, status = 201)
+            return JsonResponse({'message' : '회원가입 성공'}, status = 200)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
