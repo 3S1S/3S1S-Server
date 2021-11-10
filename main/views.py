@@ -31,6 +31,9 @@ class SignUp(View):
                 if val == "" and key != 'belong':
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =400)
             
+            if not data['is_valid']:
+                return JsonResponse({'message' : 'ID 중복 확인을 수행해주세요.'}, status =400)
+
             # 비밀번호 재입력 불일치
             if data['password'] != data['password_check']:
                 return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 400)
