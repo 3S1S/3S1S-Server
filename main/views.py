@@ -91,9 +91,9 @@ class CheckID(View):
         try:
             # ID 중복
             if User.objects.filter(id = data['id']).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.'}, status = 400)
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 400)
             else: 
-                return JsonResponse({'message' : '생성 가능한 ID입니다.'}, status = 200)
+                return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
