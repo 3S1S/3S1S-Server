@@ -8,6 +8,7 @@ urlpatterns = [
     # 회원
     path('signup',views.SignUp.as_view()),
     path('signin',views.SignIn.as_view()),
+    path('checkid',views.CheckID.as_view()),   
 
     # 프로젝트
     path('project',views.Project.as_view())
