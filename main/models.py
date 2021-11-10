@@ -25,8 +25,8 @@ class Project(models.Model):
 
 
 class Member(models.Model):
-    project = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
-    user = models.ForeignKey('User', models.DO_NOTHING)
+    project_id = models.OneToOneField('Project', models.DO_NOTHING, primary_key=True)
+    user_id = models.ForeignKey('User', models.DO_NOTHING)
     leader = models.IntegerField(blank=True, null=True)
     contribution_rate = models.FloatField(blank=True, null=True)
 
