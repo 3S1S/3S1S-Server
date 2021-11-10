@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         fields = (
+            'id',
             'title',
             'team',
             'description',

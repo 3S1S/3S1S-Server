@@ -45,7 +45,7 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = 'Notification'
-        unique_together = (('project_id', 'invitee'),)
+        unique_together = (('project', 'invitee'),)
 
 
 class Schedule(models.Model):

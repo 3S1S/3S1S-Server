@@ -8,6 +8,7 @@ urlpatterns = [
     # 회원
     path('signup',views.SignUp.as_view()),
     path('signin',views.SignIn.as_view()),
+    path('checkid',views.CheckID.as_view()),   
 
     # 프로젝트
     path('project',views.ProjectList.as_view()),
@@ -15,6 +16,7 @@ urlpatterns = [
     # 멤버
     path('member',views.MemberList.as_view()),
 
+    # 알림
+    path('notification',views.Notification.as_view())
 
-    
 ]
