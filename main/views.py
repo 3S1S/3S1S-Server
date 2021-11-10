@@ -65,7 +65,7 @@ class SignUp(View):
                 belong = data['belong']
             ).save()
 
-            return JsonResponse({'message' : '회원가입 성공'}, status = 201)
+            return JsonResponse({'message' : '회원가입 성공'}, status = 210)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -159,7 +159,6 @@ class NotificationList(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
 
     def create(self, request, *args, **kwargs):
-
         try:
             # request에서 body 뽑아오기
             byte_str = request.body

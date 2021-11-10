@@ -135,7 +135,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-CORS_ORIGIN_WHITELIST = ['http://localhost:3000',
-    'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com'] 
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ]
+}
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com' 
+]
+CORS_ORIGIN_WHITELIST = [
+    'http://localhost:3000',
+    'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com'
+] 
 
 CORS_ALLOW_CREDENTIALS = True
