@@ -20,6 +20,7 @@ from config import SECRET_KEY
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
 
+# 회원
 class SignUp(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -30,10 +31,6 @@ class SignUp(View):
                 if val == "":
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =400)
             
-            # ID 중복
-            if User.objects.filter(id = data['id']).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.'}, status = 400)
-            
             # 비밀번호 재입력 불일치
             if data['password'] != data['password_check']:
                 return JsonResponse({'message' : '비밀번호가 일치하지 않습니다.'}, status = 400)
@@ -41,6 +38,7 @@ class SignUp(View):
             # 이메일 중복
             if User.objects.filter(email = data['email']).exists():
                 return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 400)
+            
             else: # 이메일 형식 오류
                 regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
                 mo = regex.search(data['email'])
@@ -57,10 +55,9 @@ class SignUp(View):
             return JsonResponse({'message' : '회원가입 성공'}, status = 201)
 
         except json.JSONDecodeError as e :
-            return JsonResponse({"status": 400, 'message': f'Json_ERROR:{e}'}, status = 400)
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
-            return JsonResponse({"status": 400, "message" : "Invalid Value"}, status = 400)
-
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 class SignIn(View):
     @csrf_exempt
@@ -74,8 +71,6 @@ class SignIn(View):
             if User.objects.filter(id = data['id']).exists():
                 user = User.objects.get(id = data['id'])
 
-     
-
                 if bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
                     token = user.id
                     return JsonResponse({'token' : token}, status=200)
@@ -83,11 +78,29 @@ class SignIn(View):
                 return JsonResponse({"message" : "Wrong Password"}, status = 201)
               
             return JsonResponse({"message": "Unexist ID"}, status = 202)
+        
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
-            return JsonResponse({"message" : "Invalid Value"}, status = 401)
+class CheckID(View):
+    def get(self,request):
+        data = json.loads(request.body)
+        
+        try:
+            # ID 중복
+            if User.objects.filter(id = data['id']).exists():
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.'}, status = 400)
+            else: 
+                return JsonResponse({'message' : '생성 가능한 ID입니다.'}, status = 200)
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
+# 프로젝트
 class Project(generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
