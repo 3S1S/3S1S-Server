@@ -70,7 +70,7 @@ class SignIn(View):
 
         try: 
             if data['id'] == "" or data['password'] == "":
-                return JsonResponse({"message": "Please fill in the required items."}, status = 400) 
+                return JsonResponse({"message": "Please fill in the required items."}, status = 210) 
 
             if User.objects.filter(id = data['id']).exists():
                 user = User.objects.get(id = data['id'])
@@ -79,9 +79,9 @@ class SignIn(View):
                     token = user.id
                     return JsonResponse({'token' : token}, status=200)
 
-                return JsonResponse({"message" : "Wrong Password"}, status = 201)
+                return JsonResponse({"message" : "Wrong Password"}, status = 211)
               
-            return JsonResponse({"message": "Unexist ID"}, status = 202)
+            return JsonResponse({"message": "Unexist ID"}, status = 212)
         
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -95,7 +95,7 @@ class CheckID(View):
         try:
             # ID 중복
             if User.objects.filter(id = id).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 400)
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 210)
             else: 
                 return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
         except json.JSONDecodeError as e :
