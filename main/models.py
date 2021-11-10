@@ -33,7 +33,7 @@ class Member(models.Model):
     class Meta:
         managed = False
         db_table = 'Member'
-        unique_together = (('project', 'user'),)
+        unique_together = (('project_id', 'user_id'),)
 
 
 class Notification(models.Model):
