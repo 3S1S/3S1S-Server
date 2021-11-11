@@ -17,6 +17,9 @@ urlpatterns = [
     path('members',views.MemberList.as_view()),
 
     # 알림
-    path('notifications',views.NotificationList.as_view())
+    path('notifications',views.NotificationList.as_view()),
+    
+    # 알림 수락 / 거절 
+    path('notifications/response',views.NotificationResponse.as_view())
 
 ]

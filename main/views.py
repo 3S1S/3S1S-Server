@@ -164,13 +164,12 @@ class ProjectList (View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)   
 
 
-# 팀원
+# 팀원을 보여줌 
 class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
     
     
-        
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
     def get(self, request, *args, **kwargs):
         cur = connection.cursor()
@@ -188,37 +187,42 @@ class MemberList(generics.ListCreateAPIView):
         try:        
             
             queryset = Member.objects.filter(project = project_id).all()    
-            return JsonResponse({'status' : 200, 'data': list(queryset.values())}, status = 200)
+            return JsonResponse({'data': list(queryset.values())}, status = 200)
         
         except KeyError:
-            return JsonResponse({"status": 400, "message" : "Invalid Value"}, status = 400)
+            return JsonResponse({"message" : "Invalid Value"}, status = 400)
         
-        
-    #알림을 수락 하였을 때 멤버 db에 추가 
-    def create(self, request, *args, **kwargs):
-        data=json.loads(request.body)
-        
-        try:
-            ## leader의 값은 무조건 0이 된다.
-            if data['leader']== "1":
-                data['leader'] = "0"
-                data = json.dumps(data, indent=4).encode('utf-8')
-                request.body = data
 
-            # 성공했을 때 
-            # 성공 status 201
-            return super().create(request, *args, **kwargs)
-            
-        except json.JSONDecodeError as e :
-            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
-        except KeyError:
-            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
 # 알림          
 class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
+    
+     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.      
+    def get(self, request, *args, **kwargs):
+        cur = connection.cursor()
+        
+        cur.execute("ALTER TABLE Member AUTO_INCREMENT=1")
+        cur.execute("SET @COUNT = 0")
+        cur.execute("UPDATE Member SET id = @COUNT:=@COUNT+1")
+        cur.fetchall()
+        
+        connection.commit()
+        connection.close()
+        
+        invitee_id = request.GET.get('invitee',None)
+        
+        try:        
+            
+            queryset = Notification.objects.filter(invitee = invitee_id).all()    
+            return JsonResponse({'data': list(queryset.values())}, status = 200)
+        
+        except KeyError:
+            return JsonResponse({"message" : "Invalid Value"}, status = 400)
+        
+        
 
     def create(self, request, *args, **kwargs):
         data=json.loads(request.body)
@@ -231,8 +235,12 @@ class NotificationList(generics.ListCreateAPIView):
             #이미 멤버로 참여 하고 있을 경우 
             if Member.objects.filter(project = data['project'], user = data['invitee']).exists() :
                 return JsonResponse({"message" : "이미 멤버로 참여하고 있습니다."}, status = 210)
+                    
+            #해당 학생이 없을 때
+            if not User.objects.filter(id = data['invitee']).exists():
+                return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
             
-            # 뽑아온 body에 원하는 작업 수행
+            # 뽑아온 body에 원하는 작업 수행            
             data['invite_date'] = str(datetime.datetime.now())
             
             # 수행 결과를 다시 request에 반영
@@ -246,3 +254,40 @@ class NotificationList(generics.ListCreateAPIView):
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+            
+            
+class NotificationResponse(generics.ListCreateAPIView):
+
+    #알림을 수락 하였을 때 멤버 db에 추가 
+    def create(self, request, *args, **kwargs):
+        data=json.loads(request.body)
+        
+        try:
+            
+            # 수락 했을 때 
+            # 성공 status 201
+            if data['accept'] == 1:
+                
+                ## leader의 값은 무조건 0이 된다.
+                Member.objects.create(
+                    project = Project.objects.get(id = data['project']),
+                    user = User.objects.get(id = data['user']),
+                    leader = 0,
+                    contribution_rate = 0
+                ).save()
+                message, status = '멤버 초대를 수락 하였습니다.', 201
+            # 거절 했을 때 
+            # 거절 status 200
+            else:
+                message, status = '멤버 초대를 거절 하였습니다.', 200
+            
+            # 알림 삭제 
+            Notification.objects.filter(project = data['project'], invitee = data['user']).delete()     
+            
+            return JsonResponse({'message': message}, status = status) 
+            
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+
