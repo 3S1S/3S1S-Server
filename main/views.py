@@ -1,3 +1,4 @@
+from django.db import connection
 from django.db.models import query
 from django.db.models.query import QuerySet
 from django.db.models.query_utils import Q
@@ -96,6 +97,7 @@ class SignIn(View):
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+    
 
 class CheckID(View):
     def get(self,request):
@@ -127,6 +129,32 @@ class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
     
+    
+        
+    # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
+    def get(self, request, *args, **kwargs):
+        cur = connection.cursor()
+        
+        cur.execute("ALTER TABLE Member AUTO_INCREMENT=1")
+        cur.execute("SET @COUNT = 0")
+        cur.execute("UPDATE Member SET id = @COUNT:=@COUNT+1")
+        cur.fetchall()
+        
+        connection.commit()
+        connection.close()
+        
+        project_id = request.GET.get('project',None)
+        
+        try:        
+            
+            queryset = Member.objects.filter(project = project_id).all()    
+            return JsonResponse({'status' : 200, 'data': list(queryset.values())}, status = 200)
+        
+        except KeyError:
+            return JsonResponse({"status": 400, "message" : "Invalid Value"}, status = 400)
+        
+        
+    #알림을 수락 하였을 때 멤버 db에 추가 
     def create(self, request, *args, **kwargs):
         # request에서 body 뽑아오기
         byte_str = request.body
@@ -134,18 +162,11 @@ class MemberList(generics.ListCreateAPIView):
         data = eval(repr(ast.literal_eval(dict_str)))
         
         try:
-            #중복된 멤버
-            if Member.objects.filter(project = data['project'], user = data['user']).exists() :
-                return JsonResponse({"message" : "이미 멤버로 참여하고 있습니다."}, status = 210)
-
-            #해당 학생이 없을 때
-            if not User.objects.filter(id = data['user']).exists():
-                return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
-
-            # 중복된 리더 
-            if data['leader']== 1:
-                if Member.objects.filter(project = data['project'], leader = data['leader']).exists():
-                    return JsonResponse({"message" : "리더가 이미 있습니다."}, status = 210)
+            ## leader의 값은 무조건 0이 된다.
+            if data['leader']== "1":
+                data['leader'] = "0"
+                data = json.dumps(data, indent=4).encode('utf-8')
+                request.body = data
 
             # 성공했을 때 
             # 성공 status 201
