@@ -72,7 +72,6 @@ class SignUp(View):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
-
 class SignIn(View):
     @csrf_exempt
     def post(self, request):
@@ -116,10 +115,14 @@ class CheckID(View):
 
 
 
+
+# 프로젝트
 class ProjectList (generics.ListCreateAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     
+
+# 팀원
 class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
@@ -153,7 +156,8 @@ class MemberList(generics.ListCreateAPIView):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
-          
+
+# 알림          
 class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
