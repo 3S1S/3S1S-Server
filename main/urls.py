@@ -11,12 +11,12 @@ urlpatterns = [
     path('checkid',views.CheckID.as_view()),   
 
     # 프로젝트
-    path('project',views.ProjectList.as_view()),
+    path('projects',views.ProjectList.as_view()),
     
     # 멤버
-    path('member',views.MemberList.as_view()),
+    path('members',views.MemberList.as_view()),
 
     # 알림
-    path('notification',views.NotificationList.as_view())
+    path('notifications',views.NotificationList.as_view())
 
 ]

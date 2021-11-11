@@ -27,13 +27,12 @@ class Project(models.Model):
 class Member(models.Model):
     project = models.ForeignKey('Project', models.DO_NOTHING)
     user = models.ForeignKey('User', models.DO_NOTHING)
-    leader = models.IntegerField(blank=True, null=True)
+    leader = models.PositiveIntegerField(blank=True, null=True)
     contribution_rate = models.FloatField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'Member'
-        unique_together = (('project_id', 'user_id'),)
 
 
 class Notification(models.Model):
@@ -45,7 +44,6 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = 'Notification'
-        unique_together = (('project_id', 'invitee'),)
 
 
 class Schedule(models.Model):
@@ -90,13 +88,12 @@ class Todo(models.Model):
 
 
 class Participant(models.Model):
-    todo = models.OneToOneField('Todo', models.DO_NOTHING, primary_key=True)
+    todo = models.ForeignKey('Todo', models.DO_NOTHING)
     user = models.ForeignKey('User', models.DO_NOTHING)
 
     class Meta:
         managed = False
         db_table = 'Participant'
-        unique_together = (('todo_id', 'user_id'),)
 
 
 class Comment(models.Model):
