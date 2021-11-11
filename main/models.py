@@ -6,6 +6,7 @@ class User(models.Model):
     name = models.CharField(max_length=10)
     email = models.CharField(unique=True, max_length=30)
     belong = models.CharField(max_length=45, blank=True, null=True)
+    img_url = models.CharField(max_length=100, blank=True, null=True)
     class Meta:
         managed = False
         db_table = 'User'
@@ -18,6 +19,7 @@ class Project(models.Model):
     subject = models.CharField(max_length=20, blank=True, null=True)
     purpose = models.CharField(max_length=30, blank=True, null=True)
     progress_rate = models.FloatField(blank=True, null=True)
+    img_url = models.CharField(max_length=100, blank=True, null=True)
 
     class Meta:
         managed = False

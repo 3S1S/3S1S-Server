@@ -8,7 +8,8 @@ class UserSerializer(serializers.ModelSerializer):
             'id',
             'password',
             'name',
-            'email'
+            'email',
+            'img_url'
         )
         model = User
 
@@ -21,7 +22,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             'description',
             'subject',
             'purpose',
-            'progress_rate'
+            'progress_rate',
+            'img_url'
+
         )
         model = Project
 
