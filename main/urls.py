@@ -17,6 +17,8 @@ urlpatterns = [
     path('members',views.MemberList.as_view()),
 
     # 알림
-    path('notifications',views.NotificationList.as_view())
+    path('notifications',views.NotificationList.as_view()),
 
+    # ToDo
+    path('todos',views.ToDoList.as_view())
 ]

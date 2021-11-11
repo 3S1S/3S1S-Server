@@ -1,19 +1,12 @@
-from django.db import connection
-from django.db.models import query
-from django.db.models.query import QuerySet
-from django.db.models.query_utils import Q
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
-from rest_framework.serializers import Serializer
-from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework import generics
 
-import json, ast
+import json
 import bcrypt
 import re
 import datetime 
@@ -22,7 +15,7 @@ import datetime
 import ast
 
 
-from main.models import Project, User, Member, Notification
+from main.models import Participant, Project, Todo, User, Member, Notification
 from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
 from config import SECRET_KEY 
 
@@ -30,7 +23,8 @@ from config import SECRET_KEY
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
 
-# 회원
+## 회원
+# 회원가입
 class SignUp(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -73,6 +67,7 @@ class SignUp(View):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
+# 로그인
 class SignIn(View):
     @csrf_exempt
     def post(self, request):
@@ -99,6 +94,7 @@ class SignIn(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
     
 
+# ID 중복 확인
 class CheckID(View):
     def get(self,request):
         id = request.GET.get('id', None)
@@ -116,7 +112,8 @@ class CheckID(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-# 프로젝트
+## 프로젝트
+# 프로젝트 생성, 목록
 class ProjectList (View):
     def get(self, request):
         id = request.GET.get('id',None)
@@ -164,7 +161,8 @@ class ProjectList (View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)   
 
 
-# 팀원
+## 멤버
+# 멤버 추가, 목록
 class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
@@ -215,7 +213,8 @@ class MemberList(generics.ListCreateAPIView):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-# 알림          
+## 알림
+# 알림 생성
 class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
@@ -245,4 +244,57 @@ class NotificationList(generics.ListCreateAPIView):
         except json.JSONDecodeError as e :
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
-                return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+                return JsonResponse({'message': 'Invalid Value'}, status = 500)
+
+
+## ToDo
+# ToDo 생성, 목록
+class ToDoList(View):
+    def get(self, request):
+        project = request.GET.get('project', None)
+
+        try:    
+            todos = Todo.objects.filter(project = project)
+
+            return JsonResponse({'todo_list': list(todos.values())}, status = 200)
+        
+        except json.JSONDecodeError as e :
+                return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+                return JsonResponse({'message': 'Invalid Value'}, status = 500)
+
+    def post(self, request):
+        data = json.loads(request.body)
+
+        try:
+            # 필수항목 미입력
+            for val in data.items():
+                if val == "":
+                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
+
+            # 날짜 정보 부정확
+            if data['start_date'] > data['end_date']:
+                return JsonResponse({'message' : '설정한 기간이 올바르지 않습니다.'}, status =210)
+
+            created_todo = Todo.objects.create(
+                project = Project.objects.get(id = data['project']),
+                writer = User.objects.get(id = data['writer']),
+                description = data['description'],
+                state = 0,
+                start_date = "2021-11-11",
+                end_date = "2021-11-11"
+            )
+            created_todo.save()
+
+            for participant in data['participants']:
+                Participant.objects.create(
+                    todo = created_todo,
+                    user = User.objects.get(id = participant)
+                ).save()
+            
+            return JsonResponse({'message' : 'ToDo 생성 성공'}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
