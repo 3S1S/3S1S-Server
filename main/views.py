@@ -114,13 +114,53 @@ class CheckID(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-
-
 # 프로젝트
-class ProjectList (generics.ListCreateAPIView):
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
+class ProjectList (View):
+    def get(self, request):
+        id = request.GET.get('id',None)
+
+        try:
+            project_list = list(Member.objects.filter(user_id = id).values('project_id'))
+            
+            result = ""
+            for project in project_list:
+                if result != "":
+                    result |= Project.objects.filter(id = project['project_id'])
+                else: result = Project.objects.filter(id = project['project_id'])
+
+            return JsonResponse({'project_list' : list(result.values())}, status = 200)
+        
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
     
+    def post(self, request):
+        data = json.loads(request.body)
+
+        try:
+            # 필수항목 미입력
+            for key, val in data.items():
+                if val == "" and key in ['title', 'team', 'description']:
+                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
+
+            Project.objects.create(
+                title = data['title'],
+                team = data['team'],
+                description = data['description'],
+                subject = data['subject'],
+                purpose = data['purpose'],
+                progress_rate = 0.0,
+                img_url = data["img_url"]
+            ).save()
+
+            return JsonResponse({'message' : '프로젝트 생성 성공'}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)   
+
 
 # 팀원
 class MemberList(generics.ListCreateAPIView):
@@ -128,10 +168,7 @@ class MemberList(generics.ListCreateAPIView):
     serializer_class = MemberSerializer
     
     def create(self, request, *args, **kwargs):
-        # request에서 body 뽑아오기
-        byte_str = request.body
-        dict_str = byte_str.decode("UTF-8")
-        data = eval(repr(ast.literal_eval(dict_str)))
+        data=json.loads(request.body)
         
         try:
             #중복된 멤버
@@ -163,12 +200,9 @@ class NotificationList(generics.ListCreateAPIView):
     serializer_class = NotificationSerializer
 
     def create(self, request, *args, **kwargs):
-        try:
-            # request에서 body 뽑아오기
-            byte_str = request.body
-            dict_str = byte_str.decode("UTF-8")
-            data = eval(repr(ast.literal_eval(dict_str)))
-            
+        data=json.loads(request.body)
+
+        try:    
             #이미 알림을 보냈을 경우 
             if Notification.objects.filter(project = data['project'], invitee = data['invitee']).exists() :
                 return JsonResponse({"message" : "이미 알림을 보냈습니다"}, status = 210)
