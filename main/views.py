@@ -303,10 +303,10 @@ class NotificationResponse(generics.ListCreateAPIView):
 # ToDo 생성, 목록
 class ToDoList(View):
     def get(self, request):
-        project = request.GET.get('project', None)
+        project, state = request.GET.get('project', None), request.GET.get('state', None)
 
         try:    
-            todos = Todo.objects.filter(project = project)
+            todos = Todo.objects.filter(project = project, state = state)
 
             return JsonResponse({'todo_list': list(todos.values())}, status = 200)
         
