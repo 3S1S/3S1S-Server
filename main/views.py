@@ -1,3 +1,4 @@
+from django.db import connection
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -32,11 +33,12 @@ class SignUp(View):
         try:
             # 필수항목 미입력
             for key, val in data.items():
-                if val == "" and key != 'belong':
+                if val == "" and key not in ['checked_id', 'belong']:
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
             
-            if not data['is_valid']:
-                return JsonResponse({'message' : 'ID 중복 확인을 수행해주세요.'}, status =210)
+            # ID 중복
+            if data['id'] != data['checked_id']:
+                return JsonResponse({'message' : 'ID 중복 확인을 수행하세요.'}, status =210)
 
             # 비밀번호 재입력 불일치
             if data['password'] != data['password_check']:
@@ -47,7 +49,7 @@ class SignUp(View):
                 return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 210)
             
             else: # 이메일 형식 오류
-                regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
+                regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.][a-z.]+")
                 mo = regex.search(data['email'])
                 if mo == None:
                     return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 210)
@@ -100,11 +102,15 @@ class CheckID(View):
         id = request.GET.get('id', None)
         
         try:
+            # 항목 미입력
+            if id == "":
+                return JsonResponse({'message' : 'ID를 입력하세요.', 'checked_id' : ""}, status =210)
+
             # ID 중복
             if User.objects.filter(id = id).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 210)
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'checked_id' : ""}, status = 210)
             else: 
-                return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
+                return JsonResponse({'message' : '생성 가능한 ID입니다.', 'checked_id': id}, status = 200)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -143,7 +149,7 @@ class ProjectList (View):
                 if val == "" and key in ['title', 'team', 'description']:
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
 
-            Project.objects.create(
+            created_project = Project.objects.create(
                 title = data['title'],
                 team = data['team'],
                 description = data['description'],
@@ -151,8 +157,16 @@ class ProjectList (View):
                 purpose = data['purpose'],
                 progress_rate = 0.0,
                 img_url = data["img_url"]
-            ).save()
+            )
+            created_project.save()
 
+            Member.objects.create(
+                project = created_project,
+                user = User.objects.get(id = data['creator']),
+                leader = 1,
+                contribution_rate = 0.0
+            ).save()
+            
             return JsonResponse({'message' : '프로젝트 생성 성공'}, status = 201)
 
         except json.JSONDecodeError as e :
