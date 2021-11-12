@@ -310,7 +310,7 @@ class ToDoList(View):
             for todo in todos:
                 participants = Participant.objects.filter(todo = todo['id']).values('user')
                 participants = [d['user'] for d in participants]
-                todo['participant'] = participants
+                todo['participants'] = participants
 
             return JsonResponse({'todo_list': todos}, status = 200)
         
