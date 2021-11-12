@@ -83,8 +83,9 @@ class SignIn(View):
                 user = User.objects.get(id = data['id'])
 
                 if bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
-                    token = user.id
-                    return JsonResponse({'token' : token}, status=200)
+                    id = user.id
+                    name = user.name
+                    return JsonResponse({'id' : id, 'name' : name}, status=200)
 
                 return JsonResponse({"message" : "Wrong Password"}, status = 210)
               
