@@ -197,7 +197,6 @@ class MemberList(generics.ListCreateAPIView):
         project_id = request.GET.get('project',None)
         
         try:        
-            
             queryset = Member.objects.filter(project = project_id).all()    
             return JsonResponse({'data': list(queryset.values())}, status = 200)
         
@@ -211,7 +210,7 @@ class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     
-     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.      
+    # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.      
     def get(self, request, *args, **kwargs):
         cur = connection.cursor()
         
@@ -248,8 +247,7 @@ class NotificationList(generics.ListCreateAPIView):
             #해당 학생이 없을 때
             if not User.objects.filter(id = data['invitee']).exists():
                 return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
-            
-            # 뽑아온 body에 원하는 작업 수행            
+                      
             data['invite_date'] = str(datetime.datetime.now())
             
             # 수행 결과를 다시 request에 반영
@@ -263,7 +261,8 @@ class NotificationList(generics.ListCreateAPIView):
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
-            
+
+# 알림 수락 / 거절
 class NotificationResponse(generics.ListCreateAPIView):
 
     #알림을 수락 하였을 때 멤버 db에 추가 
@@ -306,9 +305,14 @@ class ToDoList(View):
         project, state = request.GET.get('project', None), request.GET.get('state', None)
 
         try:    
-            todos = Todo.objects.filter(project = project, state = state)
+            todos = list(Todo.objects.filter(project = project, state = state).values())
 
-            return JsonResponse({'todo_list': list(todos.values())}, status = 200)
+            for todo in todos:
+                participants = Participant.objects.filter(todo = todo['id']).values('user')
+                participants = [d['user'] for d in participants]
+                todo['participant'] = participants
+
+            return JsonResponse({'todo_list': todos}, status = 200)
         
         except json.JSONDecodeError as e :
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
