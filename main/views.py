@@ -342,8 +342,8 @@ class ToDoList(View):
                 title = data['title'],
                 description = data['description'],
                 state = 0,
-                start_date = "2021-11-11",
-                end_date = "2021-11-11"
+                start_date = data['start_date'],
+                end_date = data['end_date']
             )
             created_todo.save()
 
