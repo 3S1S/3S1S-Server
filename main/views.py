@@ -308,12 +308,13 @@ class ToDoList(View):
             todos = list(Todo.objects.filter(project = project, state = state).values())
 
             for todo in todos:
+                d_day = todo['d_day'] = (datetime.date.today() - todo['end_date']).days
+                d_day = " + " + str(d_day) if d_day > 0 else " - " + (str(d_day * -1) if d_day != 0 else 'Day')
+                todo['d_day'] = "D" + d_day
+
                 participants = Participant.objects.filter(todo = todo['id']).values('user')
                 participants = [d['user'] for d in participants]
                 todo['participants'] = participants
-                d_day = todo['d-day'] = (datetime.date.today() - todo['end_date']).days
-                d_day = " + " + str(d_day) if d_day > 0 else " - " + (str(d_day * -1) if d_day != 0 else 'Day')
-                todo['d-day'] = "D" + d_day
 
             return JsonResponse({'todo_list': todos}, status = 200)
         
