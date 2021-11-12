@@ -1,19 +1,13 @@
 from django.db import connection
-from django.db.models import query
-from django.db.models.query import QuerySet
-from django.db.models.query_utils import Q
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
-from rest_framework.serializers import Serializer
-from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework import generics
 
-import json, ast
+import json
 import bcrypt
 import re
 import datetime 
@@ -22,7 +16,7 @@ import datetime
 import ast
 
 
-from main.models import Project, User, Member, Notification
+from main.models import Participant, Project, Todo, User, Member, Notification
 from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
 from config import SECRET_KEY 
 
@@ -30,7 +24,8 @@ from config import SECRET_KEY
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
 
-# 회원
+## 회원
+# 회원가입
 class SignUp(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -38,11 +33,12 @@ class SignUp(View):
         try:
             # 필수항목 미입력
             for key, val in data.items():
-                if val == "" and key != 'belong':
+                if val == "" and key not in ['checked_id', 'belong']:
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
             
-            if not data['is_valid']:
-                return JsonResponse({'message' : 'ID 중복 확인을 수행해주세요.'}, status =210)
+            # ID 중복
+            if data['id'] != data['checked_id']:
+                return JsonResponse({'message' : 'ID 중복 확인을 수행하세요.'}, status =210)
 
             # 비밀번호 재입력 불일치
             if data['password'] != data['password_check']:
@@ -53,7 +49,7 @@ class SignUp(View):
                 return JsonResponse({'message' : '동일한 이메일로 가입한 회원이 존재합니다.'}, status = 210)
             
             else: # 이메일 형식 오류
-                regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.]com")
+                regex= re.compile(r"[a-zA-Z0-9_]+@[a-z]+[.][a-z.]+")
                 mo = regex.search(data['email'])
                 if mo == None:
                     return JsonResponse({'message' : '이메일 형식이 옳지 않습니다.'}, status = 210)
@@ -73,6 +69,7 @@ class SignUp(View):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
+# 로그인
 class SignIn(View):
     @csrf_exempt
     def post(self, request):
@@ -99,16 +96,21 @@ class SignIn(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
     
 
+# ID 중복 확인
 class CheckID(View):
     def get(self,request):
         id = request.GET.get('id', None)
         
         try:
+            # 항목 미입력
+            if id == "":
+                return JsonResponse({'message' : 'ID를 입력하세요.', 'checked_id' : ""}, status =210)
+
             # ID 중복
             if User.objects.filter(id = id).exists():
-                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'is_valid' : False}, status = 210)
+                return JsonResponse({'message' : '동일한 ID가 존재합니다.', 'checked_id' : ""}, status = 210)
             else: 
-                return JsonResponse({'message' : '생성 가능한 ID입니다.', 'is_valid' : True}, status = 200)
+                return JsonResponse({'message' : '생성 가능한 ID입니다.', 'checked_id': id}, status = 200)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -116,7 +118,8 @@ class CheckID(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-# 프로젝트
+## 프로젝트
+# 프로젝트 생성, 목록
 class ProjectList (View):
     def get(self, request):
         id = request.GET.get('id',None)
@@ -146,7 +149,7 @@ class ProjectList (View):
                 if val == "" and key in ['title', 'team', 'description']:
                     return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
 
-            Project.objects.create(
+            created_project = Project.objects.create(
                 title = data['title'],
                 team = data['team'],
                 description = data['description'],
@@ -154,8 +157,16 @@ class ProjectList (View):
                 purpose = data['purpose'],
                 progress_rate = 0.0,
                 img_url = data["img_url"]
-            ).save()
+            )
+            created_project.save()
 
+            Member.objects.create(
+                project = created_project,
+                user = User.objects.get(id = data['creator']),
+                leader = 1,
+                contribution_rate = 0.0
+            ).save()
+            
             return JsonResponse({'message' : '프로젝트 생성 성공'}, status = 201)
 
         except json.JSONDecodeError as e :
@@ -164,7 +175,8 @@ class ProjectList (View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)   
 
 
-# 팀원을 보여줌 
+## 멤버
+# 멤버 추가, 목록
 class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
@@ -193,9 +205,8 @@ class MemberList(generics.ListCreateAPIView):
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
         
 
-
-
-# 알림          
+## 알림
+# 알림 생성
 class NotificationList(generics.ListCreateAPIView):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
@@ -222,8 +233,6 @@ class NotificationList(generics.ListCreateAPIView):
         except KeyError:
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
         
-        
-
     def create(self, request, *args, **kwargs):
         data=json.loads(request.body)
 
@@ -255,7 +264,6 @@ class NotificationList(generics.ListCreateAPIView):
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
             
-            
 class NotificationResponse(generics.ListCreateAPIView):
 
     #알림을 수락 하였을 때 멤버 db에 추가 
@@ -263,7 +271,6 @@ class NotificationResponse(generics.ListCreateAPIView):
         data=json.loads(request.body)
         
         try:
-            
             # 수락 했을 때 
             # 성공 status 201
             if data['accept'] == 1:
@@ -291,3 +298,55 @@ class NotificationResponse(generics.ListCreateAPIView):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
+
+## ToDo
+# ToDo 생성, 목록
+class ToDoList(View):
+    def get(self, request):
+        project = request.GET.get('project', None)
+
+        try:    
+            todos = Todo.objects.filter(project = project)
+
+            return JsonResponse({'todo_list': list(todos.values())}, status = 200)
+        
+        except json.JSONDecodeError as e :
+                return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+                return JsonResponse({'message': 'Invalid Value'}, status = 500)
+
+    def post(self, request):
+        data = json.loads(request.body)
+
+        try:
+            # 필수항목 미입력
+            for val in data.items():
+                if val == "":
+                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status =210)
+
+            # 날짜 정보 부정확
+            if data['start_date'] > data['end_date']:
+                return JsonResponse({'message' : '설정한 기간이 올바르지 않습니다.'}, status =210)
+
+            created_todo = Todo.objects.create(
+                project = Project.objects.get(id = data['project']),
+                writer = User.objects.get(id = data['writer']),
+                description = data['description'],
+                state = 0,
+                start_date = "2021-11-11",
+                end_date = "2021-11-11"
+            )
+            created_todo.save()
+
+            for participant in data['participants']:
+                Participant.objects.create(
+                    todo = created_todo,
+                    user = User.objects.get(id = participant)
+                ).save()
+            
+            return JsonResponse({'message' : 'ToDo 생성 성공'}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)

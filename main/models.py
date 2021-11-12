@@ -27,18 +27,18 @@ class Project(models.Model):
 
 
 class Member(models.Model):
-    project = models.ForeignKey('Project', models.DO_NOTHING)
-    user = models.ForeignKey('User', models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING, db_column='project_id')
+    user = models.ForeignKey('User', models.DO_NOTHING, db_column='user_id')
     leader = models.PositiveIntegerField(blank=True, null=True)
     contribution_rate = models.FloatField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'Member'
-
+        unique_together = (('project', 'user'),)
 
 class Notification(models.Model):
-    project = models.ForeignKey('Project', models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING, db_column='project_id')
     invitee = models.ForeignKey('User', models.DO_NOTHING, db_column='invitee', related_name='invitee')
     inviter = models.ForeignKey('User', models.DO_NOTHING, db_column='inviter', related_name='inviter')
     invite_date = models.DateTimeField()
@@ -46,15 +46,16 @@ class Notification(models.Model):
     class Meta:
         managed = False
         db_table = 'Notification'
+        unique_together = (('project', 'invitee'),)
 
 
 class Schedule(models.Model):
-    project = models.ForeignKey(Project, models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING, db_column='project_id')
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
+    start_date = models.DateField()
+    end_date = models.DateField()
 
     class Meta:
         managed = False
@@ -62,7 +63,7 @@ class Schedule(models.Model):
 
 
 class File(models.Model):
-    project = models.ForeignKey('Project', models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING, db_column='project_id')
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
@@ -76,13 +77,13 @@ class File(models.Model):
 
 
 class Todo(models.Model):
-    project = models.ForeignKey(Project, models.DO_NOTHING)
+    project = models.ForeignKey('Project', models.DO_NOTHING, db_column='project_id')
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
     state = models.IntegerField()
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
+    start_date = models.DateField()
+    end_date = models.DateField()
 
     class Meta:
         managed = False
@@ -90,16 +91,17 @@ class Todo(models.Model):
 
 
 class Participant(models.Model):
-    todo = models.ForeignKey('Todo', models.DO_NOTHING)
-    user = models.ForeignKey('User', models.DO_NOTHING)
+    todo = models.ForeignKey('Todo', models.DO_NOTHING, db_column='todo_id')
+    user = models.ForeignKey('User', models.DO_NOTHING, db_column='user_id')
 
     class Meta:
         managed = False
         db_table = 'Participant'
+        unique_together = (('todo', 'user'),)
 
 
 class Comment(models.Model):
-    todo = models.ForeignKey('Todo', models.DO_NOTHING)
+    todo = models.ForeignKey('Todo', models.DO_NOTHING, db_column='todo_id')
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     content = models.TextField()
     create_at = models.CharField(max_length=45)
