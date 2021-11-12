@@ -311,6 +311,9 @@ class ToDoList(View):
                 participants = Participant.objects.filter(todo = todo['id']).values('user')
                 participants = [d['user'] for d in participants]
                 todo['participants'] = participants
+                d_day = todo['d-day'] = (datetime.date.today() - todo['end_date']).days
+                d_day = " + " + str(d_day) if d_day > 0 else " - " + (str(d_day * -1) if d_day != 0 else 'Day')
+                todo['d-day'] = "D" + d_day
 
             return JsonResponse({'todo_list': todos}, status = 200)
         
@@ -335,6 +338,7 @@ class ToDoList(View):
             created_todo = Todo.objects.create(
                 project = Project.objects.get(id = data['project']),
                 writer = User.objects.get(id = data['writer']),
+                title = data['title'],
                 description = data['description'],
                 state = 0,
                 start_date = "2021-11-11",
