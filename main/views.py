@@ -101,7 +101,6 @@ class SignIn(View):
 class CheckID(View):
     def get(self,request):
         id = request.GET.get('id', None)
-        
         try:
             # 항목 미입력
             if id == "":
@@ -248,20 +247,31 @@ class NotificationList(generics.ListCreateAPIView):
             #해당 학생이 없을 때
             if not User.objects.filter(id = data['invitee']).exists():
                 return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
-                      
-            data['invite_date'] = str(datetime.datetime.now())
+              
             
-            # 수행 결과를 다시 request에 반영
-            data = json.dumps(data, indent=4).encode('utf-8')
-            request.body = data
+            data['invite_date'] = str(datetime.datetime.now())
 
-            #성공시 status 201
-            return super().create(request, *args, **kwargs)
+            Notification.objects.create(
+                project = Project.objects.get(id = data['project']),
+                invitee = User.objects.get(id = data['invitee']),
+                inviter = User.objects.get(id = data['inviter']),
+                invite_date = data['invite_date']
+            ).save()        
+            
+            project_title = Project.objects.get(id = data['project']).title
+            invitee_name = User.objects.get(id = data['invitee']).name
+            inviter_name = User.objects.get(id = data['inviter']).name
+
+            return JsonResponse({'project' : data['project'], 'invitee': data['invitee'], 'inviter': data['inviter'],'invite_date': data['invite_date'], 'project_title' : project_title, 'invitee_name' : invitee_name, 'inviter_name': inviter_name})
+
     
         except json.JSONDecodeError as e :
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+
+            
+
 
 # 알림 수락 / 거절
 class NotificationResponse(generics.ListCreateAPIView):
