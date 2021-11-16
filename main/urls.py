@@ -12,9 +12,11 @@ urlpatterns = [
 
     # 프로젝트
     path('projects',views.ProjectList.as_view()),
+    path('projects/<int:id>',views.ProjectDetail.as_view(), name="deleteProject"),
     
     # 멤버
     path('members',views.MemberList.as_view()),
+    path('delete_members',views.DeleteMember.as_view()),
 
     # 알림
     path('notifications',views.NotificationList.as_view()),

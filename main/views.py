@@ -1,6 +1,7 @@
 from django.db import connection
 from django.http.response import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
@@ -96,7 +97,6 @@ class SignIn(View):
         except KeyError:
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
     
-
 # ID 중복 확인
 class CheckID(View):
     def get(self,request):
@@ -120,7 +120,7 @@ class CheckID(View):
 
 ## 프로젝트
 # 프로젝트 생성, 목록
-class ProjectList (View):
+class ProjectList(View):
     def get(self, request):
         id = request.GET.get('id',None)
 
@@ -133,7 +133,7 @@ class ProjectList (View):
                     result |= Project.objects.filter(id = project['project_id'])
                 else: result = Project.objects.filter(id = project['project_id'])
 
-            return JsonResponse({'project_list' : list(result.values())}, status = 200)
+            return JsonResponse({'project_list' : list(result.values()) if result != "" else []}, status = 200)
         
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -172,7 +172,19 @@ class ProjectList (View):
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
-            return JsonResponse({'message' : 'Invalid Value'}, status = 500)   
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)   
+
+class ProjectDetail(View):
+    def delete(self, request, id):
+        try:
+            Project.objects.get(id = id).delete()
+        
+            return JsonResponse({'message': '프로젝트 삭제 성공'}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
 
 ## 멤버
@@ -180,7 +192,6 @@ class ProjectList (View):
 class MemberList(generics.ListCreateAPIView):
     queryset = Member.objects.all()
     serializer_class = MemberSerializer
-    
     
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
     def get(self, request, *args, **kwargs):
@@ -203,6 +214,23 @@ class MemberList(generics.ListCreateAPIView):
         except KeyError:
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
         
+class DeleteMember(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        
+        try:
+            Member.objects.get(project = data['project'], user = data['user']).delete()
+
+            if not Member.objects.filter(project = data['project']).exists():
+                ProjectDetail.delete(self, request, id = data['project'])
+                return JsonResponse({'message': '프로젝트 탈퇴 후 프로젝트 삭제'}, status = 200)
+
+            return JsonResponse({'message': '프로젝트 탈퇴 성공'}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
 ## 알림
 # 알림 생성
@@ -225,7 +253,6 @@ class NotificationList(generics.ListCreateAPIView):
         invitee_id = request.GET.get('invitee',None)
         
         try:        
-            
             queryset = Notification.objects.filter(invitee = invitee_id).all()    
             return JsonResponse({'data': list(queryset.values())}, status = 200)
         
