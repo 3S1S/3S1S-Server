@@ -25,6 +25,17 @@ from config import SECRET_KEY
 def index(request):
     return HttpResponse("Hello, world. You're at the polls index.")
 
+def reorder(object):
+    cur = connection.cursor()
+        
+    cur.execute("ALTER TABLE " + object + " AUTO_INCREMENT=1")
+    cur.execute("SET @COUNT = 0")
+    cur.execute("UPDATE " + object + " SET id = @COUNT:=@COUNT+1")
+    cur.fetchall()
+    
+    connection.commit()
+    connection.close()
+
 ## 회원
 # 회원가입
 class SignUp(View):
@@ -175,6 +186,17 @@ class ProjectList(View):
             return JsonResponse({'message': 'Invalid Value'}, status = 500)   
 
 class ProjectDetail(View):
+    def get(self, request, id):
+        item = list(Project.objects.filter(id = id).values())[0]
+
+        try:
+            return JsonResponse({'Project_content' : item}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)   
+
     def delete(self, request, id):
         try:
             Project.objects.get(id = id).delete()
@@ -195,18 +217,9 @@ class MemberList(generics.ListCreateAPIView):
     
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
     def get(self, request, *args, **kwargs):
-        cur = connection.cursor()
+        reorder("Member")
         
-        cur.execute("ALTER TABLE Member AUTO_INCREMENT=1")
-        cur.execute("SET @COUNT = 0")
-        cur.execute("UPDATE Member SET id = @COUNT:=@COUNT+1")
-        cur.fetchall()
-        
-        connection.commit()
-        connection.close()
-        
-        project_id = request.GET.get('project',None)
-        
+        project_id = request.GET.get('project', None)
         try:        
             queryset = Member.objects.filter(project = project_id).all()    
             return JsonResponse({'data': list(queryset.values())}, status = 200)
@@ -234,32 +247,25 @@ class DeleteMember(View):
 
 ## 알림
 # 알림 생성
-class NotificationList(generics.ListCreateAPIView):
-    queryset = Notification.objects.all()
-    serializer_class = NotificationSerializer
-    
+class NotificationList(View):
     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.      
     def get(self, request, *args, **kwargs):
-        cur = connection.cursor()
-        
-        cur.execute("ALTER TABLE Member AUTO_INCREMENT=1")
-        cur.execute("SET @COUNT = 0")
-        cur.execute("UPDATE Member SET id = @COUNT:=@COUNT+1")
-        cur.fetchall()
-        
-        connection.commit()
-        connection.close()
-        
+        reorder("Notification")
         invitee_id = request.GET.get('invitee',None)
         
         try:        
-            queryset = Notification.objects.filter(invitee = invitee_id).all()    
-            return JsonResponse({'data': list(queryset.values())}, status = 200)
+            notifications = list(Notification.objects.filter(invitee = invitee_id).values())
+            for notification in notifications:
+                notification['project_title'] = Project.objects.filter(id = notification['project_id'])[0].title
+                notification['invitee_name'] = User.objects.get(id = notification['invitee_id']).name
+                notification['inviter_name'] = User.objects.get(id = notification['inviter_id']).name
+
+            return JsonResponse({'notifications': notifications}, status = 200)
         
         except KeyError:
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
         
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         data=json.loads(request.body)
 
         try:    
@@ -274,8 +280,7 @@ class NotificationList(generics.ListCreateAPIView):
             #해당 학생이 없을 때
             if not User.objects.filter(id = data['invitee']).exists():
                 return JsonResponse({"message" : "해당 학생이 없습니다."}, status = 210)
-              
-            
+
             data['invite_date'] = str(datetime.datetime.now())
 
             Notification.objects.create(
@@ -283,15 +288,10 @@ class NotificationList(generics.ListCreateAPIView):
                 invitee = User.objects.get(id = data['invitee']),
                 inviter = User.objects.get(id = data['inviter']),
                 invite_date = data['invite_date']
-            ).save()        
+            ).save()
             
-            project_title = Project.objects.get(id = data['project']).title
-            invitee_name = User.objects.get(id = data['invitee']).name
-            inviter_name = User.objects.get(id = data['inviter']).name
+            return JsonResponse({'message': '초대 알림 생성 성공'})
 
-            return JsonResponse({'project' : data['project'], 'invitee': data['invitee'], 'inviter': data['inviter'],'invite_date': data['invite_date'], 'project_title' : project_title, 'invitee_name' : invitee_name, 'inviter_name': inviter_name})
-
-    
         except json.JSONDecodeError as e :
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
@@ -299,12 +299,11 @@ class NotificationList(generics.ListCreateAPIView):
 
             
 
-
 # 알림 수락 / 거절
-class NotificationResponse(generics.ListCreateAPIView):
+class NotificationResponse(View):
 
     #알림을 수락 하였을 때 멤버 db에 추가 
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         data=json.loads(request.body)
         
         try:

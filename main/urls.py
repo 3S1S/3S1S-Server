@@ -12,7 +12,7 @@ urlpatterns = [
 
     # 프로젝트
     path('projects',views.ProjectList.as_view()),
-    path('projects/<int:id>',views.ProjectDetail.as_view(), name="deleteProject"),
+    path('projects/<int:id>',views.ProjectDetail.as_view()),
     
     # 멤버
     path('members',views.MemberList.as_view()),
