@@ -13,6 +13,8 @@ urlpatterns = [
     # 프로젝트
     path('projects',views.ProjectList.as_view()),
     path('projects/<int:id>',views.ProjectDetail.as_view()),
+    path('projects/<int:id>/indeadline',views.ProjectDetailInDeadline.as_view()),
+    path('projects/<int:id>/mytodos',views.ProjectDetailMyTodo.as_view()),
     
     # 멤버
     path('members',views.MemberList.as_view()),

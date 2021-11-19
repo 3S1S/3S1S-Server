@@ -20,7 +20,8 @@ class Project(models.Model):
     purpose = models.CharField(max_length=30, blank=True, null=True)
     progress_rate = models.FloatField(blank=True, null=True)
     img_url = models.CharField(max_length=100, blank=True, null=True)
-
+    memo = models.TextField(db_collation='utf8_bin', blank=True, null=True)
+    
     class Meta:
         managed = False
         db_table = 'Project'
