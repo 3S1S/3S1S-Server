@@ -1,12 +1,8 @@
 from django.db import connection
 from django.http.response import JsonResponse
-from django.shortcuts import redirect
-from django.urls import reverse
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
-
-from rest_framework import generics
 
 import json
 import bcrypt
@@ -18,7 +14,6 @@ import ast
 
 
 from main.models import Participant, Project, Todo, User, Member, Notification
-from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
 from config import SECRET_KEY 
 
 # Create your views here.
@@ -167,7 +162,8 @@ class ProjectList(View):
                 subject = data['subject'],
                 purpose = data['purpose'],
                 progress_rate = 0.0,
-                img_url = data["img_url"]
+                img_url = data["img_url"],
+                memo = ""
             )
             created_project.save()
 
@@ -187,10 +183,15 @@ class ProjectList(View):
 
 class ProjectDetail(View):
     def get(self, request, id):
-        item = list(Project.objects.filter(id = id).values())[0]
-
         try:
-            return JsonResponse({'Project_content' : item}, status = 201)
+            item = list(Project.objects.filter(id = id).values())[0]
+
+            if not Member.objects.filter(project = id, leader = 1).exists():
+                return JsonResponse({'message': '올바르지 않은 프로젝트 id에 대한 접근입니다.'}, status = 400)
+            else: 
+                item['leader'] = list(Member.objects.filter(project = id, leader = 1).values('user'))[0]['user']
+            
+            return JsonResponse({'project_content' : item}, status = 201)
 
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -208,25 +209,67 @@ class ProjectDetail(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
+class ProjectDetailInDeadline(View):
+    def get(self, request, id):
+        try:
+            todos = list(Todo.objects.filter(project = id).exclude(state = 2).values('id', 'title', 'state', 'end_date'))
+
+            inDeadline = []
+            for todo in todos:
+                d_day = (datetime.date.today() - todo['end_date']).days
+                print(d_day)
+                if d_day <= 3:
+                    d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                    todo['d_day'] = "D" + d_day
+                    inDeadline.append(todo)
+
+            return JsonResponse({'todo_list': inDeadline}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
+
+class ProjectDetailMyTodo(View):
+    def get(self, request, id):
+        user = request.GET.get('user', None)
+        try:    
+            todos = list(Todo.objects.filter(project = id).exclude(state = 2).values('id', 'title', 'state', 'end_date'))
+            
+            MyTodo = []
+            for todo in todos:
+                if Participant.objects.filter(todo = todo['id'], user = user).values('user').exists():    
+                    d_day = (datetime.date.today() - todo['end_date']).days
+                    if d_day <= 3:
+                        d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                        todo['d_day'] = "D" + d_day
+                        MyTodo.append(todo)
+
+            return JsonResponse({'todo_list': MyTodo}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
 ## 멤버
 # 멤버 추가, 목록
-class MemberList(generics.ListCreateAPIView):
-    queryset = Member.objects.all()
-    serializer_class = MemberSerializer
-    
+class MemberList(View):
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         reorder("Member")
-        
         project_id = request.GET.get('project', None)
-        try:        
-            queryset = Member.objects.filter(project = project_id).all()    
-            return JsonResponse({'data': list(queryset.values())}, status = 200)
+
+        try:
+            members = Member.objects.filter(project = project_id).values('user_id', 'leader', 'contribution_rate').order_by('-leader')
+            for member in members:
+                member['profile_img'] = User.objects.get(id = member['user_id']).img_url
+
+            return JsonResponse({'members': list(members)}, status = 200)
         
         except KeyError:
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
-        
+
 class DeleteMember(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -245,6 +288,7 @@ class DeleteMember(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
+
 ## 알림
 # 알림 생성
 class NotificationList(View):
@@ -253,10 +297,10 @@ class NotificationList(View):
         reorder("Notification")
         invitee_id = request.GET.get('invitee',None)
         
-        try:        
+        try:
             notifications = list(Notification.objects.filter(invitee = invitee_id).values())
             for notification in notifications:
-                notification['project_title'] = Project.objects.filter(id = notification['project_id'])[0].title
+                notification['project_title'] = Project.objects.get(id = notification['project_id']).title
                 notification['invitee_name'] = User.objects.get(id = notification['invitee_id']).name
                 notification['inviter_name'] = User.objects.get(id = notification['inviter_id']).name
 
@@ -296,12 +340,9 @@ class NotificationList(View):
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
-
-            
-
+  
 # 알림 수락 / 거절
 class NotificationResponse(View):
-
     #알림을 수락 하였을 때 멤버 db에 추가 
     def post(self, request, *args, **kwargs):
         data=json.loads(request.body)
@@ -346,7 +387,7 @@ class ToDoList(View):
 
             for todo in todos:
                 d_day = todo['d_day'] = (datetime.date.today() - todo['end_date']).days
-                d_day = " + " + str(d_day) if d_day > 0 else " - " + (str(d_day * -1) if d_day != 0 else 'Day')
+                d_day = " + " + str(d_day) if d_day > 0 else " - " + str(abs(d_day) if d_day != 0 else 'Day')
                 todo['d_day'] = "D" + d_day
 
                 participants = Participant.objects.filter(todo = todo['id']).values('user')
