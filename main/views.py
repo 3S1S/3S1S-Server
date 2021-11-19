@@ -4,6 +4,8 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 
+from rest_framework import generics
+
 import json
 import bcrypt
 import re
@@ -14,7 +16,8 @@ import ast
 
 
 from main.models import Participant, Project, Todo, User, Member, Notification
-from config import SECRET_KEY 
+from config import SECRET_KEY
+from main.serializer import ProjectSerializer 
 
 # Create your views here.
 def index(request):
@@ -193,6 +196,29 @@ class ProjectDetail(View):
             
             return JsonResponse({'project_content' : item}, status = 201)
 
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)   
+
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            
+            project = Project.objects.get(id = id)
+            if 'memo' not in data.keys():
+                project.title = data['title']
+                project.team = data['team']
+                project.description = data['description']
+                project.subject = data['subject']
+                project.purpose = data['purpose']
+                project.img_url = data["img_url"]
+            else :
+                project.memo = data["memo"]
+            project.save()
+
+            return JsonResponse({'message': '프로젝트 정보 수정 성공'}, status = 201)
+            
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
