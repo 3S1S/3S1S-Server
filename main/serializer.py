@@ -23,8 +23,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             'subject',
             'purpose',
             'progress_rate',
-            'img_url'
-
+            'img_url',
+            'memo'
         )
         model = Project
 
@@ -37,6 +37,7 @@ class MemberSerializer(serializers.ModelSerializer):
             'contribution_rate'
         )
         model = Member
+    
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:

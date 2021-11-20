@@ -1,7 +1,5 @@
 from django.db import connection
 from django.http.response import JsonResponse
-from django.shortcuts import redirect
-from django.urls import reverse
 from django.http import HttpResponse
 from django.utils.functional import empty
 from django.views.decorators.csrf import csrf_exempt
@@ -19,8 +17,8 @@ import ast
 
 
 from main.models import Participant, Project, Todo, User, Member, Notification
-from main.serializer import ProjectSerializer, UserSerializer, MemberSerializer, NotificationSerializer
-from config import SECRET_KEY 
+from config import SECRET_KEY
+from main.serializer import ProjectSerializer 
 
 # Create your views here.
 def index(request):
@@ -168,7 +166,8 @@ class ProjectList(View):
                 subject = data['subject'],
                 purpose = data['purpose'],
                 progress_rate = 0.0,
-                img_url = data["img_url"]
+                img_url = data["img_url"],
+                memo = ""
             )
             created_project.save()
 
@@ -188,11 +187,39 @@ class ProjectList(View):
 
 class ProjectDetail(View):
     def get(self, request, id):
-        item = list(Project.objects.filter(id = id).values())[0]
-
         try:
-            return JsonResponse({'Project_content' : item}, status = 201)
+            item = list(Project.objects.filter(id = id).values())[0]
 
+            if not Member.objects.filter(project = id, leader = 1).exists():
+                return JsonResponse({'message': '올바르지 않은 프로젝트 id에 대한 접근입니다.'}, status = 400)
+            else: 
+                item['leader'] = list(Member.objects.filter(project = id, leader = 1).values('user'))[0]['user']
+            
+            return JsonResponse({'project_content' : item}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)   
+
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            
+            project = Project.objects.get(id = id)
+            if 'memo' not in data.keys():
+                project.title = data['title']
+                project.team = data['team']
+                project.description = data['description']
+                project.subject = data['subject']
+                project.purpose = data['purpose']
+                project.img_url = data["img_url"]
+            else :
+                project.memo = data["memo"]
+            project.save()
+
+            return JsonResponse({'message': '프로젝트 정보 수정 성공'}, status = 201)
+            
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
@@ -209,25 +236,67 @@ class ProjectDetail(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
+class ProjectDetailInDeadline(View):
+    def get(self, request, id):
+        try:
+            todos = list(Todo.objects.filter(project = id).exclude(state = 2).values('id', 'title', 'state', 'end_date'))
+
+            inDeadline = []
+            for todo in todos:
+                d_day = (datetime.date.today() - todo['end_date']).days
+                print(d_day)
+                if d_day <= 3:
+                    d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                    todo['d_day'] = "D" + d_day
+                    inDeadline.append(todo)
+
+            return JsonResponse({'todo_list': inDeadline}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
+
+class ProjectDetailMyTodo(View):
+    def get(self, request, id):
+        user = request.GET.get('user', None)
+        try:    
+            todos = list(Todo.objects.filter(project = id).exclude(state = 2).values('id', 'title', 'state', 'end_date'))
+            
+            MyTodo = []
+            for todo in todos:
+                if Participant.objects.filter(todo = todo['id'], user = user).values('user').exists():    
+                    d_day = (datetime.date.today() - todo['end_date']).days
+                    if d_day <= 3:
+                        d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                        todo['d_day'] = "D" + d_day
+                        MyTodo.append(todo)
+
+            return JsonResponse({'todo_list': MyTodo}, status = 200)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
 ## 멤버
 # 멤버 추가, 목록
-class MemberList(generics.ListCreateAPIView):
-    queryset = Member.objects.all()
-    serializer_class = MemberSerializer
-    
+class MemberList(View):
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.    
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         reorder("Member")
-        
         project_id = request.GET.get('project', None)
-        try:        
-            queryset = Member.objects.filter(project = project_id).all()    
-            return JsonResponse({'data': list(queryset.values())}, status = 200)
+
+        try:
+            members = Member.objects.filter(project = project_id).values('user_id', 'leader', 'contribution_rate').order_by('-leader')
+            for member in members:
+                member['profile_img'] = User.objects.get(id = member['user_id']).img_url
+
+            return JsonResponse({'members': list(members)}, status = 200)
         
         except KeyError:
             return JsonResponse({"message" : "Invalid Value"}, status = 400)
-        
+
 class DeleteMember(View):
     def post(self, request):
         data = json.loads(request.body)
@@ -246,6 +315,7 @@ class DeleteMember(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
+
 ## 알림
 # 알림 생성
 class NotificationList(View):
@@ -254,10 +324,10 @@ class NotificationList(View):
         reorder("Notification")
         invitee_id = request.GET.get('invitee',None)
         
-        try:        
+        try:
             notifications = list(Notification.objects.filter(invitee = invitee_id).values())
             for notification in notifications:
-                notification['project_title'] = Project.objects.filter(id = notification['project_id'])[0].title
+                notification['project_title'] = Project.objects.get(id = notification['project_id']).title
                 notification['invitee_name'] = User.objects.get(id = notification['invitee_id']).name
                 notification['inviter_name'] = User.objects.get(id = notification['inviter_id']).name
 
@@ -297,12 +367,9 @@ class NotificationList(View):
                 return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
                 return JsonResponse({'message' : 'Invalid Value'}, status = 500)
-
-            
-
+  
 # 알림 수락 / 거절
 class NotificationResponse(View):
-
     #알림을 수락 하였을 때 멤버 db에 추가 
     def post(self, request, *args, **kwargs):
         data=json.loads(request.body)
@@ -347,7 +414,7 @@ class ToDoList(View):
 
             for todo in todos:
                 d_day = todo['d_day'] = (datetime.date.today() - todo['end_date']).days
-                d_day = " + " + str(d_day) if d_day > 0 else " - " + (str(d_day * -1) if d_day != 0 else 'Day')
+                d_day = " + " + str(d_day) if d_day > 0 else " - " + str(abs(d_day) if d_day != 0 else 'Day')
                 todo['d_day'] = "D" + d_day
 
                 participants = Participant.objects.filter(todo = todo['id']).values('user')
@@ -401,177 +468,177 @@ class ToDoList(View):
 
 class ToDo_state_change(View):
     def post(self, request):
+        try:
+            data = json.loads(request.body)
 
-        data = json.loads(request.body)
-        
-        todo_instance = Todo.objects.get(id=data['todo'])
-        todo_project = Todo.objects.get(id=data['todo']).project
-  
-        member_list = Member.objects.filter(project = todo_project).values('user')     
-        member_list = [d['user'] for d in member_list]
-                               
-        #시작전 -> 진행중      
-        if data['state'] == 1 and todo_instance.state == 0:
-            todo_instance.state = 1
-            todo_instance.save()
-            
-        #시작전 -> 완료      
-        elif data['state'] == 2 and todo_instance.state == 0:
-            todo_instance.state = 2
-            todo_instance.save()
-            
-            
-            ##이 프로젝트에서 Todo 완료한 participant id (user id X)
-            total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
-            total_participants = [d['participant'] for d in total_participants]
-            if len(total_participants) > 1:
-                total_participants.pop(0)
-            ## 새로 기여도를 계산 하기위해 초기화하여 저장 
-            for z in range(len(member_list)):
-                zero = Member.objects.get(user = member_list[z], project = todo_project)                     
-                zero.contribution_rate = 0
-                zero.save()
-            
-            ## 기여도를 게산 하여 저장 
-            for n in range(len(member_list)):
-                for m in range(len(total_participants)):
-                    participants_id = Participant.objects.get(id = total_participants[m]).user.id
-                    member_id = member_list[n]
-                    if  participants_id== member_id:                    
-                        member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
-                        member_new_rate.contribution_rate += 1.0                    
-                        member_new_rate.save()
-                member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
-                member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
-                temp = member_rate.contribution_rate 
-                member_rate.contribution_rate = round(temp, 2)*100           
-                member_rate.save()
-            
-        
-        #진행중 -> 시작전      
-        elif data['state'] == 0 and todo_instance.state == 1:
-            todo_instance.state = 0
-            todo_instance.save()
-              
-        #진행중 -> 완료 
-        elif data['state'] == 2 and todo_instance.state == 1:
-            todo_instance.state = 2
-            todo_instance.save()
-            
-            total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
-            total_participants = [d['participant'] for d in total_participants]
-            if len(total_participants) > 1:
-                total_participants.pop(0)
-             ## 새로 기여도를 계산 하기위해 초기화하여 저장 
-            for z in range(len(member_list)):
-                zero = Member.objects.get(user = member_list[z], project = todo_project)                     
-                zero.contribution_rate = 0
-                zero.save()
-            
-            ## 기여도를 게산 하여 저장 
-            for n in range(len(member_list)):
-                for m in range(len(total_participants)):
-                    participants_id = Participant.objects.get(id = total_participants[m]).user.id
-                    member_id = member_list[n]
-                    if  participants_id== member_id:                    
-                        member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
-                        member_new_rate.contribution_rate += 1.0                    
-                        member_new_rate.save()
-                member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
-                member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
-                temp = member_rate.contribution_rate 
-                member_rate.contribution_rate = round(temp, 2)*100            
-                member_rate.save()
-        
-        #완료 -> 진행중      
-        elif data['state'] == 1 and todo_instance.state == 2:
-            todo_instance.state = 1
-            todo_instance.save()
-                        
-            total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
-            total_participants = [d['participant'] for d in total_participants]
-            if len(total_participants) > 1:
-                total_participants.pop(0)
-                
-            ## 새로 기여도를 계산 하기위해 초기화하여 저장 
-            for z in range(len(member_list)):
-                zero = Member.objects.get(user = member_list[z], project = todo_project)                     
-                zero.contribution_rate = 0
-                zero.save()
-            
-            ## 기여도를 게산 하여 저장 
-            for n in range(len(member_list)):
-                for m in range(len(total_participants)):
-                    participants_id = Participant.objects.get(id = total_participants[m]).user.id
-                    member_id = member_list[n]
-                    if  participants_id== member_id:                    
-                        member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
-                        member_new_rate.contribution_rate += 1.0                    
-                        member_new_rate.save()
-                member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
-                member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
-                temp = member_rate.contribution_rate 
-                member_rate.contribution_rate = round(temp, 2)*100             
-                member_rate.save()
-                
-        
-        #완료 -> 시작전 
-        elif data['state'] == 0 and todo_instance.state == 2:
-            todo_instance.state = 0
-            todo_instance.save()
-            
-            total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
-            total_participants = [d['participant'] for d in total_participants]
-            if len(total_participants) > 1:
-                total_participants.pop(0)  
-            
-            ## 새로 기여도를 계산 하기위해 초기화하여 저장 
-            for z in range(len(member_list)):
-                zero = Member.objects.get(user = member_list[z], project = todo_project)                     
-                zero.contribution_rate = 0
-                zero.save()
-            
-            ## 기여도를 게산 하여 저장 
-            for n in range(len(member_list)):
-                for m in range(len(total_participants)):
-                    participants_id = Participant.objects.get(id = total_participants[m]).user.id
-                    member_id = member_list[n]
-                    if  participants_id== member_id:                    
-                        member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
-                        member_new_rate.contribution_rate += 1.0                    
-                        member_new_rate.save()
-                member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
-                member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
-                temp = member_rate.contribution_rate 
-                member_rate.contribution_rate = round(temp, 2)*100              
-                member_rate.save()
-                
-                
+            todo_instance = Todo.objects.get(id=data['todo'])
+            todo_project = Todo.objects.get(id=data['todo']).project
 
-        
-        else:
-            return JsonResponse({'message': 'fail'})
-        
-                ## 진행율 계산 
-        complete_todo = Todo.objects.filter(state = 2, project = todo_project).values('id')         
-        complete_todo = [d['id'] for d in complete_todo]
-        
-        ing_todo = Todo.objects.filter(state = 1, project = todo_project).values('id')         
-        ing_todo = [d['id'] for d in ing_todo]
-        
-        pre_todo = Todo.objects.filter(state = 0, project = todo_project).values('id')         
-        pre_todo = [d['id'] for d in pre_todo]
-        
-        project_instance = Project.objects.get(id=todo_project.id)
-        
-        total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
-        comp_prog = len(complete_todo)
-        
-        project_instance.progress_rate = round((comp_prog / total_prog), 2) * 100
-        project_instance.save()
-                
-        
-        return JsonResponse({'message': complete_todo})
-    
-        return JsonResponse({'message': 'success'})
-         
+            member_list = Member.objects.filter(project = todo_project).values('user')     
+            member_list = [d['user'] for d in member_list]
+
+            #시작전 -> 진행중      
+            if data['state'] == 1 and todo_instance.state == 0:
+                todo_instance.state = 1
+                todo_instance.save()
+
+            #시작전 -> 완료      
+            elif data['state'] == 2 and todo_instance.state == 0:
+                todo_instance.state = 2
+                todo_instance.save()
+
+
+                ##이 프로젝트에서 Todo 완료한 participant id (user id X)
+                total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
+                total_participants = [d['participant'] for d in total_participants]
+                if len(total_participants) > 1:
+                    total_participants.pop(0)
+                ## 새로 기여도를 계산 하기위해 초기화하여 저장 
+                for z in range(len(member_list)):
+                    zero = Member.objects.get(user = member_list[z], project = todo_project)                     
+                    zero.contribution_rate = 0
+                    zero.save()
+
+                ## 기여도를 게산 하여 저장 
+                for n in range(len(member_list)):
+                    for m in range(len(total_participants)):
+                        participants_id = Participant.objects.get(id = total_participants[m]).user.id
+                        member_id = member_list[n]
+                        if  participants_id== member_id:                    
+                            member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
+                            member_new_rate.contribution_rate += 1.0                    
+                            member_new_rate.save()
+                    member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
+                    member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
+                    temp = member_rate.contribution_rate 
+                    member_rate.contribution_rate = round(temp, 2)*100           
+                    member_rate.save()
+
+
+            #진행중 -> 시작전      
+            elif data['state'] == 0 and todo_instance.state == 1:
+                todo_instance.state = 0
+                todo_instance.save()
+
+            #진행중 -> 완료 
+            elif data['state'] == 2 and todo_instance.state == 1:
+                todo_instance.state = 2
+                todo_instance.save()
+
+                total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
+                total_participants = [d['participant'] for d in total_participants]
+                if len(total_participants) > 1:
+                    total_participants.pop(0)
+                 ## 새로 기여도를 계산 하기위해 초기화하여 저장 
+                for z in range(len(member_list)):
+                    zero = Member.objects.get(user = member_list[z], project = todo_project)                     
+                    zero.contribution_rate = 0
+                    zero.save()
+
+                ## 기여도를 게산 하여 저장 
+                for n in range(len(member_list)):
+                    for m in range(len(total_participants)):
+                        participants_id = Participant.objects.get(id = total_participants[m]).user.id
+                        member_id = member_list[n]
+                        if  participants_id== member_id:                    
+                            member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
+                            member_new_rate.contribution_rate += 1.0                    
+                            member_new_rate.save()
+                    member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
+                    member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
+                    temp = member_rate.contribution_rate 
+                    member_rate.contribution_rate = round(temp, 2)*100            
+                    member_rate.save()
+
+            #완료 -> 진행중      
+            elif data['state'] == 1 and todo_instance.state == 2:
+                todo_instance.state = 1
+                todo_instance.save()
+
+                total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
+                total_participants = [d['participant'] for d in total_participants]
+                if len(total_participants) > 1:
+                    total_participants.pop(0)
+
+                ## 새로 기여도를 계산 하기위해 초기화하여 저장 
+                for z in range(len(member_list)):
+                    zero = Member.objects.get(user = member_list[z], project = todo_project)                     
+                    zero.contribution_rate = 0
+                    zero.save()
+
+                ## 기여도를 게산 하여 저장 
+                for n in range(len(member_list)):
+                    for m in range(len(total_participants)):
+                        participants_id = Participant.objects.get(id = total_participants[m]).user.id
+                        member_id = member_list[n]
+                        if  participants_id== member_id:                    
+                            member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
+                            member_new_rate.contribution_rate += 1.0                    
+                            member_new_rate.save()
+                    member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
+                    member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
+                    temp = member_rate.contribution_rate 
+                    member_rate.contribution_rate = round(temp, 2)*100             
+                    member_rate.save()
+
+
+            #완료 -> 시작전 
+            elif data['state'] == 0 and todo_instance.state == 2:
+                todo_instance.state = 0
+                todo_instance.save()
+
+                total_participants = Todo.objects.filter(state = 2, project = todo_project).values('participant')         
+                total_participants = [d['participant'] for d in total_participants]
+                if len(total_participants) > 1:
+                    total_participants.pop(0)  
+
+                ## 새로 기여도를 계산 하기위해 초기화하여 저장 
+                for z in range(len(member_list)):
+                    zero = Member.objects.get(user = member_list[z], project = todo_project)                     
+                    zero.contribution_rate = 0
+                    zero.save()
+
+                ## 기여도를 게산 하여 저장 
+                for n in range(len(member_list)):
+                    for m in range(len(total_participants)):
+                        participants_id = Participant.objects.get(id = total_participants[m]).user.id
+                        member_id = member_list[n]
+                        if  participants_id== member_id:                    
+                            member_new_rate = Member.objects.get(user = member_list[n], project = todo_project)                     
+                            member_new_rate.contribution_rate += 1.0                    
+                            member_new_rate.save()
+                    member_rate = Member.objects.get(user = member_list[n], project = todo_project) 
+                    member_rate.contribution_rate = member_rate.contribution_rate / (len(total_participants) + 0.0001)
+                    temp = member_rate.contribution_rate 
+                    member_rate.contribution_rate = round(temp, 2)*100              
+                    member_rate.save()
+
+            else:
+                return JsonResponse({'message': 'fail'})
+
+            ## 진행율 계산 
+            complete_todo = Todo.objects.filter(state = 2, project = todo_project).values('id')         
+            complete_todo = [d['id'] for d in complete_todo]
+
+            ing_todo = Todo.objects.filter(state = 1, project = todo_project).values('id')         
+            ing_todo = [d['id'] for d in ing_todo]
+
+            pre_todo = Todo.objects.filter(state = 0, project = todo_project).values('id')         
+            pre_todo = [d['id'] for d in pre_todo]
+
+            project_instance = Project.objects.get(id=todo_project.id)
+
+            total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
+            comp_prog = len(complete_todo)
+
+            project_instance.progress_rate = round((comp_prog / total_prog), 2) * 100
+            project_instance.save()
+
+
+            return JsonResponse({'message': complete_todo})
+
+            return JsonResponse({'message': 'success'})
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
