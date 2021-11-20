@@ -30,7 +30,7 @@ urlpatterns = [
 
     # ToDo
     path('todos',views.ToDoList.as_view()),
-    path('todos/change',views.ToDoStateChange.as_view())
+    path('todos/change',views.ToDoStateChange.as_view()),
 
     # 일정
     path('schedules',views.ScheduleList.as_view())
