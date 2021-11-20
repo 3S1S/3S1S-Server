@@ -9,6 +9,9 @@ urlpatterns = [
     path('signup',views.SignUp.as_view()),
     path('signin',views.SignIn.as_view()),
     path('checkid',views.CheckID.as_view()),   
+    
+    # 마이페이지
+    path('mypage', views.Mypage.as_view()),
 
     # 프로젝트
     path('projects',views.ProjectList.as_view()),
@@ -19,6 +22,7 @@ urlpatterns = [
     # 멤버
     path('members',views.MemberList.as_view()),
     path('members/delete',views.DeleteMember.as_view()),
+    path('user/search',views.UserSearch.as_view()),
 
     # 알림
     path('notifications',views.NotificationList.as_view()),
@@ -26,7 +30,7 @@ urlpatterns = [
 
     # ToDo
     path('todos',views.ToDoList.as_view()),
-    path('todos/change',views.ToDo_state_change.as_view()),
+    path('todos/change',views.ToDoStateChange.as_view())
 
     # 일정
     path('schedules',views.ScheduleList.as_view())
