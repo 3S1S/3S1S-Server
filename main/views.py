@@ -240,6 +240,21 @@ class ProjectDetail(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status = 500)  
 
+class ProjectItem(View):
+    def get(self, request, id, item):
+        try:
+            if item != 'leader':
+                item = list(Project.objects.filter(id = id).values(item))[0][item]
+            else:
+                item = list(Member.objects.filter(project = id, leader = 1).values('user'))[0]['user']
+            
+            return JsonResponse({'item' : item}, status = 201)
+
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status = 500)   
+
 class ProjectDetailInDeadline(View):
     def get(self, request, id):
         try:
@@ -503,6 +518,7 @@ class Mypage(View):
     
     def post(self, request):
         return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+
 class ToDoStateChange(View):
     
     def post(self, request):
@@ -671,7 +687,6 @@ class ToDoStateChange(View):
 
             project_instance.progress_rate = round((comp_prog / total_prog), 2) * 100
             project_instance.save()
-
 
             return JsonResponse({'message': complete_todo})
 
