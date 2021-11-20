@@ -319,6 +319,7 @@ class DeleteMember(View):
 ## 알림
 # 알림 생성
 class NotificationList(View):
+    
     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.      
     def get(self, request, *args, **kwargs):
         reorder("Notification")
@@ -466,7 +467,41 @@ class ToDoList(View):
             return JsonResponse({'message' : 'Invalid Value'}, status = 500)
 
 
-class ToDo_state_change(View):
+
+class UserSearch(View):
+    def get(self, request, *args, **kwargs):     
+        user = request.GET.get('user', None)
+        try:    
+            if len(user) < 3:
+                return JsonResponse({'message': 'id가 짧습니다.'}, status = 210)
+                
+            users = list(User.objects.filter(id__contains = user).values('id', 'name'))
+            return JsonResponse({user: users})
+            
+
+            
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+        
+class Mypage(View):
+    def get(self, request):
+        user = request.GET.get('user', None)
+        try:
+            userInformation = list(User.objects.filter(id = user).values('id', 'name', 'email', 'belong', 'img_url'))
+            
+            # status 200
+            return JsonResponse({'information' : userInformation})
+        
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+    
+    
+    def post(self, request):
+        return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+class ToDoStateChange(View):
+    
     def post(self, request):
         try:
             data = json.loads(request.body)
