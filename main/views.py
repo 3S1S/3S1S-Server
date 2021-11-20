@@ -494,7 +494,7 @@ class Mypage(View):
             userInformation = list(User.objects.filter(id = user).values('id', 'name', 'email', 'belong', 'img_url'))
             
             # status 200
-            return JsonResponse({'information' : userInformation})
+            return JsonResponse({'information' : userInformation[0]})
         
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
