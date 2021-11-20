@@ -18,7 +18,7 @@ urlpatterns = [
     
     # 멤버
     path('members',views.MemberList.as_view()),
-    path('delete_members',views.DeleteMember.as_view()),
+    path('members/delete',views.DeleteMember.as_view()),
 
     # 알림
     path('notifications',views.NotificationList.as_view()),
@@ -26,6 +26,8 @@ urlpatterns = [
 
     # ToDo
     path('todos',views.ToDoList.as_view()),
-    path('todos/change',views.ToDo_state_change.as_view())
+    path('todos/change',views.ToDo_state_change.as_view()),
 
+    # 일정
+    path('schedules',views.ScheduleList.as_view())
 ]
