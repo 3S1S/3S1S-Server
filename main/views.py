@@ -270,10 +270,9 @@ class ProjectDetailMyTodo(View):
             for todo in todos:
                 if Participant.objects.filter(todo = todo['id'], user = user).values('user').exists():    
                     d_day = abs((datetime.date.today() - todo['end_date']).days)
-                    if d_day <= 3:
-                        d_day = " - " + str(d_day) if d_day != 0 else 'Day'
-                        todo['d_day'] = "D" + d_day
-                        MyTodo.append(todo)
+                    d_day = " - " + str(d_day) if d_day != 0 else 'Day'
+                    todo['d_day'] = "D" + d_day
+                    MyTodo.append(todo)
 
             return JsonResponse({'todo_list': MyTodo}, status = 200)
 
