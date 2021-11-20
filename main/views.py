@@ -16,7 +16,7 @@ import datetime
 import ast
 
 
-from main.models import Participant, Project, Todo, User, Member, Notification
+from main.models import Participant, Project, Schedule, Todo, User, Member, Notification
 from config import SECRET_KEY
 from main.serializer import ProjectSerializer 
 
@@ -205,6 +205,10 @@ class ProjectDetail(View):
     def put(self, request, id):
         try:
             data = json.loads(request.body)
+
+            for key, val in data.items():
+                if val == "" and key in ['title', 'team', 'description']:
+                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status = 210)
             
             project = Project.objects.get(id = id)
             if 'memo' not in data.keys():
@@ -218,7 +222,7 @@ class ProjectDetail(View):
                 project.memo = data["memo"]
             project.save()
 
-            return JsonResponse({'message': '프로젝트 정보 수정 성공'}, status = 201)
+            return JsonResponse({'message': '프로젝트 정보 수정 성공'}, status = 200)
             
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
@@ -243,10 +247,9 @@ class ProjectDetailInDeadline(View):
 
             inDeadline = []
             for todo in todos:
-                d_day = (datetime.date.today() - todo['end_date']).days
-                print(d_day)
+                d_day = abs((datetime.date.today() - todo['end_date']).days)
                 if d_day <= 3:
-                    d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                    d_day = " - " + str(d_day) if d_day != 0 else 'Day'
                     todo['d_day'] = "D" + d_day
                     inDeadline.append(todo)
 
@@ -266,9 +269,9 @@ class ProjectDetailMyTodo(View):
             MyTodo = []
             for todo in todos:
                 if Participant.objects.filter(todo = todo['id'], user = user).values('user').exists():    
-                    d_day = (datetime.date.today() - todo['end_date']).days
+                    d_day = abs((datetime.date.today() - todo['end_date']).days)
                     if d_day <= 3:
-                        d_day = " - " + str(abs(d_day) if d_day < 0 else 'Day')
+                        d_day = " - " + str(d_day) if d_day != 0 else 'Day'
                         todo['d_day'] = "D" + d_day
                         MyTodo.append(todo)
 
@@ -673,6 +676,38 @@ class ToDoStateChange(View):
             return JsonResponse({'message': complete_todo})
 
             return JsonResponse({'message': 'success'})
+        except json.JSONDecodeError as e :
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
+        except KeyError:
+            return JsonResponse({'message' : 'Invalid Value'}, status = 500)
+
+class ScheduleList(View):
+    def get(self, request):
+        return JsonResponse({'message': complete_todo})
+    
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+
+            for val in data.items():    
+                if val == "":
+                    return JsonResponse({'message' : '필수 항목을 모두 입력하세요.'}, status = 210)
+
+            # 날짜 정보 부정확
+            if data['start_date'] > data['end_date']:
+                return JsonResponse({'message' : '설정한 기간이 올바르지 않습니다.'}, status = 210)
+
+            Schedule.objects.create(
+                project = Project.objects.get(id = data['project']),
+                writer = User.objects.get(id = data['writer']),
+                title = data['title'],
+                description = data['description'],
+                start_date = data['start_date'],
+                end_date = data['end_date']
+            ).save()
+
+            return JsonResponse({'message': '일정 생성 성공'}, status = 201)
+        
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
         except KeyError:
