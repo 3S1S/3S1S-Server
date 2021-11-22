@@ -431,6 +431,7 @@ class ToDoList(View):
             todos = list(Todo.objects.filter(project = project, state = state).values())
 
             for todo in todos:
+                todo['id'] = str(todo['id'])
                 d_day = todo['d_day'] = (datetime.date.today() - todo['end_date']).days
                 d_day = " + " + str(d_day) if d_day > 0 else " - " + str(abs(d_day) if d_day != 0 else 'Day')
                 todo['d_day'] = "D" + d_day
@@ -493,9 +494,7 @@ class UserSearch(View):
                 return JsonResponse({'message': 'id가 짧습니다.'}, status = 210)
                 
             users = list(User.objects.filter(id__contains = user).values('id', 'name'))
-            return JsonResponse({user: users})
-            
-
+            return JsonResponse({'search_list': users[:5]})
             
         except json.JSONDecodeError as e :
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status = 500)
