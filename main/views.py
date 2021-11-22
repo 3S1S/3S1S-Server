@@ -490,9 +490,6 @@ class UserSearch(View):
     def get(self, request, *args, **kwargs):     
         user = request.GET.get('user', None)
         try:    
-            if len(user) < 3:
-                return JsonResponse({'message': 'id가 짧습니다.'}, status = 210)
-                
             users = list(User.objects.filter(id__contains = user).values('id', 'name'))
             return JsonResponse({'search_list': users[:5]})
             
