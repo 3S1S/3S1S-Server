@@ -4,35 +4,37 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    
+
     # 회원
-    path('signup',views.SignUp.as_view()),
-    path('signin',views.SignIn.as_view()),
-    path('checkid',views.CheckID.as_view()),   
-    
+    path('signup', views.SignUp.as_view()),
+    path('signin', views.SignIn.as_view()),
+    path('checkid', views.CheckID.as_view()),
+
     # 마이페이지
     path('mypage', views.Mypage.as_view()),
 
     # 프로젝트
-    path('projects',views.ProjectList.as_view()),
-    path('projects/<int:id>',views.ProjectDetail.as_view()),
-    path('projects/<int:id>/indeadline',views.ProjectDetailInDeadline.as_view()),
-    path('projects/<int:id>/mytodos',views.ProjectDetailMyTodo.as_view()),
-    path('projects/<int:id>/<str:item>',views.ProjectItem.as_view()),
-    
+    path('projects', views.ProjectList.as_view()),
+    path('projects/<int:id>', views.ProjectDetail.as_view()),
+    path('projects/<int:id>/indeadline',
+         views.ProjectDetailInDeadline.as_view()),
+    path('projects/<int:id>/mytodos', views.ProjectDetailMyTodo.as_view()),
+    path('projects/<int:id>/<str:item>', views.ProjectItem.as_view()),
+
     # 멤버
-    path('members',views.MemberList.as_view()),
-    path('members/delete',views.DeleteMember.as_view()),
-    path('user/search',views.UserSearch.as_view()),
+    path('members', views.MemberList.as_view()),
+    path('members/delete', views.DeleteMember.as_view()),
+    path('members/validcheck', views.CheckMember.as_view()),
+    path('users/search', views.UserSearch.as_view()),
 
     # 알림
-    path('notifications',views.NotificationList.as_view()),
-    path('notifications/response',views.NotificationResponse.as_view()),
+    path('notifications', views.NotificationList.as_view()),
+    path('notifications/response', views.NotificationResponse.as_view()),
 
     # ToDo
-    path('todos',views.ToDoList.as_view()),
-    path('todos/change',views.ToDoStateChange.as_view()),
+    path('todos', views.ToDoList.as_view()),
+    path('todos/change', views.ToDoStateChange.as_view()),
 
     # 일정
-    path('schedules',views.ScheduleList.as_view())
+    path('schedules', views.ScheduleList.as_view())
 ]
