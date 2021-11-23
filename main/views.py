@@ -139,6 +139,40 @@ class CheckID(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
+class UserSearch(View):
+    def get(self, request):
+        user = request.GET.get('user', '')
+        try:
+            # 검색한 유저가 없을 경우
+            if user == '':
+                return JsonResponse({'search_list': []}, status=210)
+            else:   # 유저 검색 결과
+                users = list(User.objects.filter(
+                    id__contains=user).values('id', 'name').order_by('id'))
+                return JsonResponse({'search_list': users[:5]}, status=200)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class Mypage(View):
+    def get(self, request):
+        user = request.GET.get('user', None)
+        try:
+            userInformation = list(User.objects.filter(id=user).values(
+                'id', 'name', 'email', 'belong', 'img_url'))
+
+            # status 200
+            return JsonResponse({'information': userInformation[0]})
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+
+    def post(self, request):
+        return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
 # 프로젝트
 # 프로젝트 생성, 목록
 class ProjectList(View):
@@ -362,23 +396,6 @@ class DeleteMember(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
-class UserSearch(View):
-    def get(self, request):
-        user = request.GET.get('user', '')
-        try:
-            # 검색한 유저가 없을 경우
-            if user == '':
-                return JsonResponse({'search_list': []}, status=210)
-            else:   # 유저 검색 결과
-                users = list(User.objects.filter(
-                    id__contains=user).values('id', 'name').order_by('id'))
-                return JsonResponse({'search_list': users[:5]}, status=200)
-        except json.JSONDecodeError as e:
-            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
-        except KeyError:
-            return JsonResponse({'message': 'Invalid Value'}, status=500)
-
-
 class CheckMember(View):
     def get(self, request):
         try:
@@ -423,18 +440,18 @@ class NotificationList(View):
         except KeyError:
             return JsonResponse({"message": "Invalid Value"}, status=400)
 
-    def post(self, request, *args, **kwargs):
-        data = json.loads(request.body)
-
+    def post(self, request):
         try:
+            data = json.loads(request.body)
             data['invite_date'] = str(datetime.datetime.now())
 
-            Notification.objects.create(
-                project=Project.objects.get(id=data['project']),
-                invitee=User.objects.get(id=data['invitee']),
-                inviter=User.objects.get(id=data['inviter']),
-                invite_date=data['invite_date']
-            ).save()
+            for invitee in data['invitees']:
+                Notification.objects.create(
+                    project=Project.objects.get(id=data['project']),
+                    invitee=User.objects.get(id=invitee),
+                    inviter=User.objects.get(id=data['inviter']),
+                    invite_date=data['invite_date']
+                ).save()
 
             return JsonResponse({'message': '초대 알림 생성 성공'})
 
@@ -571,23 +588,6 @@ class ToDoDetail(View):
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status=500)
-
-
-class Mypage(View):
-    def get(self, request):
-        user = request.GET.get('user', None)
-        try:
-            userInformation = list(User.objects.filter(id=user).values(
-                'id', 'name', 'email', 'belong', 'img_url'))
-
-            # status 200
-            return JsonResponse({'information': userInformation[0]})
-
-        except json.JSONDecodeError as e:
-            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
-
-    def post(self, request):
-        return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
 class ToDoStateChange(View):
