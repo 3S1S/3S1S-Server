@@ -1,4 +1,5 @@
 from django.db import connection
+from django.forms.models import model_to_dict
 from django.http.response import JsonResponse
 from django.http import HttpResponse
 from django.utils.functional import empty
@@ -546,6 +547,25 @@ class ToDoList(View):
                 ).save()
 
             return JsonResponse({'message': 'ToDo 생성 성공'}, status=201)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class ToDoDetail(View):
+    def get(self, request, id):
+        try:
+            todo = Todo.objects.get(id=id)
+            todo = model_to_dict(todo)
+
+            participants = Participant.objects.filter(
+                todo=todo['id']).values('user')
+            participants = [d['user'] for d in participants]
+            todo['participants'] = participants
+
+            return JsonResponse({'todo_content': todo})
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
