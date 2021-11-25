@@ -818,7 +818,20 @@ class ToDoStateChange(View):
 
 class ScheduleList(View):
     def get(self, request):
-        return JsonResponse({'message': ""})
+        try:
+            project = request.GET.get('project', None)
+            schedules = list(Schedule.objects.filter(project=project).values())
+
+            for schedule in schedules:
+                if schedule['start_date'] != schedule['end_date']:
+                    schedule['end_date'] += datetime.timedelta(days=1)
+
+            return JsonResponse({'schedule_list': schedules}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
 
     def post(self, request):
         try:
@@ -838,10 +851,66 @@ class ScheduleList(View):
                 title=data['title'],
                 description=data['description'],
                 start_date=data['start_date'],
-                end_date=data['end_date']
+                end_date=data['end_date'],
+                color=data['color']
             ).save()
 
             return JsonResponse({'message': '일정 생성 성공'}, status=201)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class ScheduleDetail(View):
+    def get(self, request, id):
+        try:
+            schedule = Schedule.objects.get(id=id)
+            schedule = model_to_dict(schedule)
+
+            return JsonResponse({'schedule_content': schedule}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+
+            # 필수항목 미입력
+            for key, val in data.items():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
+
+            # 날짜 정보 부정확
+            if data['start_date'] > data['end_date']:
+                return JsonResponse({'message': '설정한 기간이 올바르지 않습니다.'}, status=210)
+
+            schedule = Schedule.objects.get(id=id)
+            schedule = model_to_dict(schedule)
+
+            schedule.title = data['title']
+            schedule.team = data['description']
+            schedule.description = data['start_date']
+            schedule.subject = data['end_date']
+            schedule.purpose = data['color']
+            schedule.save()
+
+            return JsonResponse({'message': '일정 수정 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def delete(self, request, id):
+        try:
+            Schedule.objects.get(id=id).delete()
+
+            return JsonResponse({'message': '일정 삭제 성공'}, status=200)
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
