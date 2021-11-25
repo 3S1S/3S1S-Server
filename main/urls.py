@@ -25,7 +25,6 @@ urlpatterns = [
     path('members/delete', views.DeleteMember.as_view()),
     path('members/validcheck', views.CheckMember.as_view()),
 
-
     # 알림
     path('notifications', views.NotificationList.as_view()),
     path('notifications/response', views.NotificationResponse.as_view()),
@@ -35,7 +34,7 @@ urlpatterns = [
     path('todos/<int:id>', views.ToDoDetail.as_view()),
     path('todos/change', views.ToDoStateChange.as_view()),
 
-
     # 일정
-    path('schedules', views.ScheduleList.as_view())
+    path('schedules', views.ScheduleList.as_view()),
+    path('schedules/<int:id>', views.ScheduleDetail.as_view())
 ]
