@@ -895,6 +895,9 @@ class ScheduleList(View):
                 if schedule['start_date'] != schedule['end_date']:
                     schedule['end_date'] += datetime.timedelta(days=1)
 
+                schedule['start'] = schedule.pop('start_date')
+                schedule['end'] = schedule.pop('end_date')
+
             return JsonResponse({'schedule_list': schedules}, status=200)
 
         except json.JSONDecodeError as e:
