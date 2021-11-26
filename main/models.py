@@ -116,7 +116,7 @@ class Comment(models.Model):
     todo = models.ForeignKey('Todo', models.DO_NOTHING, db_column='todo_id')
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     content = models.TextField()
-    create_at = models.CharField(max_length=45)
+    create_at = models.DateTimeField()
 
     class Meta:
         managed = False
