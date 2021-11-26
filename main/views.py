@@ -595,7 +595,7 @@ class ToDoDetail(View):
                 user_obj = User.objects.get(id=participant['user'])
                 user['id'] = user_obj.id
                 user['name'] = user_obj.name
-                user['img_url'] = user_obj.img_url
+                user['profile_img'] = user_obj.img_url
                 participant_with_name.append(user)
             todo['participants'] = participant_with_name
 
