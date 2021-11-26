@@ -17,7 +17,7 @@ import datetime
 import ast
 
 
-from main.models import Participant, Project, Schedule, Todo, User, Member, Notification
+from main.models import Participant, Project, Schedule, Todo, User, Member, Notification, Comment, File
 from config import SECRET_KEY
 from main.serializer import ProjectSerializer
 
@@ -490,7 +490,7 @@ class NotificationResponse(View):
             else:
                 message, status = '멤버 초대를 거절 하였습니다.', 200
 
-            # 알림 삭제
+            # 알림 삭제2
             Notification.objects.filter(
                 project=data['project'], invitee=data['user']).delete()
 
@@ -772,112 +772,79 @@ class ToDoStateChange(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
-class ToDoStateChange(View):
+# Todo 댓글
+class CommentList(View):
+    def get(self, request):
+        reorder("Comment")
+        todo_id = request.GET.get('todo', None)
+
+        try:
+            comments = list(Comment.objects.filter(todo=todo_id).values())
+            print(comments)
+            for comment in comments:
+
+                comment['writer_name'] = User.objects.get(
+                    id=comment['writer_id']).name + '(' + comment['writer_id'] + ')'
+
+            return JsonResponse({'comments': list(comments)}, status=200)
+
+        except KeyError:
+            return JsonResponse({"message": "Invalid Value"}, status=500)
+
     def post(self, request):
         try:
             data = json.loads(request.body)
+            data['create_at'] = str(datetime.datetime.now())
 
-            todo_instance = Todo.objects.get(id=data['todo'])
-            todo_project = Todo.objects.get(id=data['todo']).project
+            # 필수항목 미입력
+            for val in data.values():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
 
-            member_list = Member.objects.filter(
-                project=todo_project).values('user')
-            member_list = [d['user'] for d in member_list]
+            Comment.objects.create(
+                todo=Todo.objects.get(id=data['todo']),
+                writer=User.objects.get(id=data['writer']),
+                content=data['content'],
+                create_at=data['create_at']
+            ).save()
 
-            # 시작전 -> 진행중
-            if data['state'] == 1 and todo_instance.state == 0:
-                todo_instance.state = 1
-                todo_instance.save()
+            return JsonResponse({'message': '댓글 생성 성공'}, status=201)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
 
-            # 시작전 -> 완료
-            elif data['state'] == 2 and todo_instance.state == 0:
-                todo_instance.state = 2
-                todo_instance.save()
 
-            # 진행중 -> 시작전
-            elif data['state'] == 0 and todo_instance.state == 1:
-                todo_instance.state = 0
-                todo_instance.save()
+class CommentDetail(View):
 
-            # 진행중 -> 완료
-            elif data['state'] == 2 and todo_instance.state == 1:
-                todo_instance.state = 2
-                todo_instance.save()
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            data['create_at'] = str(datetime.datetime.now())
 
-            # 완료 -> 진행중
-            elif data['state'] == 1 and todo_instance.state == 2:
-                todo_instance.state = 1
-                todo_instance.save()
+            # 필수항목 미입력
+            for val in data.values():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
 
-            # 완료 -> 시작전
-            elif data['state'] == 0 and todo_instance.state == 2:
-                todo_instance.state = 0
-                todo_instance.save()
+            comment = Comment.objects.get(id=id)
 
-            else:
-                return JsonResponse({'message': 'fail'})
+            comment.content = data['content']
+            comment.create_at = data['create_at']
+            comment.save()
 
-            # <<기여도 계산>>
-            # 이 프로젝트에서 Todo 완료한 participant id (user id X)
-            total_participants = Todo.objects.filter(
-                state=2, project=todo_project).values('participant')
-            total_participants = [d['participant']
-                                  for d in total_participants]
+            return JsonResponse({'message': '댓글 수정 성공'}, status=201)
 
-            if len(total_participants) > 1:
-                total_participants.pop()
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
 
-            # 새로 기여도를 계산 하기위해 초기화하여 저장
-            for z in range(len(member_list)):
-                zero = Member.objects.get(
-                    user=member_list[z], project=todo_project)
-                zero.contribution_rate = 0
-                zero.save()
+    def delete(self, request, id):
+        try:
+            Comment.objects.get(id=id).delete()
 
-            # 기여도를 게산 하여 저장
-            for n in range(len(member_list)):
-                for m in range(len(total_participants)):
-                    participants_id = Participant.objects.get(
-                        id=total_participants[m]).user.id
-
-                    member_id = member_list[n]
-
-                    if participants_id == member_id:
-                        member_new_rate = Member.objects.get(
-                            user=member_list[n], project=todo_project)
-                        member_new_rate.contribution_rate += 1.0
-                        member_new_rate.save()
-                member_rate = Member.objects.get(
-                    user=member_list[n], project=todo_project)
-                member_rate.contribution_rate = member_rate.contribution_rate / \
-                    (len(total_participants) + 0.0001)
-                temp = member_rate.contribution_rate
-                member_rate.contribution_rate = round(temp, 2)*100
-                member_rate.save()
-
-            # <<진행율 계산>>
-            complete_todo = Todo.objects.filter(
-                state=2, project=todo_project).values('id')
-            complete_todo = [d['id'] for d in complete_todo]
-
-            ing_todo = Todo.objects.filter(
-                state=1, project=todo_project).values('id')
-            ing_todo = [d['id'] for d in ing_todo]
-
-            pre_todo = Todo.objects.filter(
-                state=0, project=todo_project).values('id')
-            pre_todo = [d['id'] for d in pre_todo]
-
-            project_instance = Project.objects.get(id=todo_project.id)
-
-            total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
-            comp_prog = len(complete_todo)
-
-            project_instance.progress_rate = round(
-                (comp_prog / total_prog), 2) * 100
-            project_instance.save()
-
-            return JsonResponse({'message': complete_todo})
+            return JsonResponse({'message': '댓글 삭제 성공'}, status=200)
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
@@ -981,6 +948,99 @@ class ScheduleDetail(View):
             Schedule.objects.get(id=id).delete()
 
             return JsonResponse({'message': '일정 삭제 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+# 자료
+
+
+class FileList(View):
+    def get(self, request):
+        reorder("File")
+        project_id = request.GET.get('project', None)
+
+        try:
+            files = list(File.objects.filter(project=project_id).values())
+            for file in files:
+                file['writer_name'] = User.objects.get(
+                    id=file['writer_id']).name + '(' + file['writer_id'] + ')'
+
+            return JsonResponse({'file': list(files)}, status=200)
+
+        except KeyError:
+            return JsonResponse({"message": "Invalid Value"}, status=500)
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            data['create_at'] = str(datetime.datetime.now())
+
+            # 필수항목 미입력
+            for val in data.values():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
+
+            File.objects.create(
+                project=Project.objects.get(id=data['project']),
+                writer=User.objects.get(id=data['writer']),
+                title=data['title'],
+                description=data['description'],
+                file_name=data['file_name'],
+                file_url=data['file_url'],
+                create_at=data['create_at']
+            ).save()
+
+            return JsonResponse({'message': '파일 생성 성공'}, status=201)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class FileDetail(View):
+    def get(self, request, id):
+        return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            data['create_at'] = str(datetime.datetime.now())
+
+            # 필수항목 미입력
+            for val in data.values():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
+
+            # # 필수항목 미입력
+            # for key, val in data.items():
+            #     if val == "" and key in ['title', 'team', 'description']:
+            #         return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
+
+            file = File.objects.get(id=id)
+
+            file.title = data['title']
+            file.description = data['description']
+            file.file_name = data['file_name']
+            file.file_url = data['file_url']
+            file.create_at = data['create_at']
+
+            file.save()
+
+            return JsonResponse({'message': '파일 수정 성공'}, status=201)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def delete(self, request, id):
+        try:
+            File.objects.get(id=id).delete()
+
+            return JsonResponse({'message': '파일 삭제 성공'}, status=200)
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)

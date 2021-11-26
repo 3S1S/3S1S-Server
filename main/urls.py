@@ -34,7 +34,17 @@ urlpatterns = [
     path('todos/<int:id>', views.ToDoDetail.as_view()),
     path('todos/change', views.ToDoStateChange.as_view()),
 
+    # comment
+    path('comments', views.CommentList.as_view()),
+    path('comments/<int:id>', views.CommentDetail.as_view()),
+
+
     # 일정
     path('schedules', views.ScheduleList.as_view()),
-    path('schedules/<int:id>', views.ScheduleDetail.as_view())
+    path('schedules/<int:id>', views.ScheduleDetail.as_view()),
+
+    # 파일
+    path('files', views.FileList.as_view()),
+    path('files/<int:id>', views.FileDetail.as_view())
+
 ]
