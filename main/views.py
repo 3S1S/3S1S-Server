@@ -589,6 +589,58 @@ class ToDoDetail(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+
+            # 필수항목 미입력
+            for val in data.values():
+                if val == "":
+                    return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
+
+            # 날짜 정보 부정확
+            if data['start_date'] > data['end_date']:
+                return JsonResponse({'message': '설정한 기간이 올바르지 않습니다.'}, status=210)
+
+            todo = Todo.objects.get(id=id)
+            todo.title = data['title']
+            todo.description = data['description']
+            todo.start_date = data['start_date']
+            todo.end_date = data['end_date']
+            todo.save()
+
+            for participant in data['participants']:
+                if not Participant.objects.filter(todo=id, user=participant).exists():
+                    Participant.objects.create(
+                        todo=todo,
+                        user=User.objects.get(id=participant)
+                    ).save()
+
+            participants = list(
+                Participant.objects.filter(todo=id).values('user'))
+            for participant in participants:
+                if not participant['user'] in data['participants']:
+                    Participant.objects.get(
+                        todo=id, user=participant['user']).delete()
+
+            return JsonResponse({'message': 'Todo 수정 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def delete(self, request, id):
+        try:
+            Todo.objects.get(id=id).delete()
+
+            return JsonResponse({'message': 'Todo 삭제 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
 
 class ToDoStateChange(View):
     def post(self, request):
@@ -890,13 +942,11 @@ class ScheduleDetail(View):
                 return JsonResponse({'message': '설정한 기간이 올바르지 않습니다.'}, status=210)
 
             schedule = Schedule.objects.get(id=id)
-            schedule = model_to_dict(schedule)
-
             schedule.title = data['title']
-            schedule.team = data['description']
-            schedule.description = data['start_date']
-            schedule.subject = data['end_date']
-            schedule.purpose = data['color']
+            schedule.description = data['description']
+            schedule.start_date = data['start_date']
+            schedule.end_date = data['end_date']
+            schedule.color = data['color']
             schedule.save()
 
             return JsonResponse({'message': '일정 수정 성공'}, status=200)
