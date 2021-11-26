@@ -53,12 +53,12 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    #'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
-    #"django.middleware.common.CommonMiddleware",
+
+    # "django.middleware.common.CommonMiddleware",
 ]
 
 ROOT_URLCONF = 'ssis.urls'
@@ -86,6 +86,14 @@ WSGI_APPLICATION = 'ssis.wsgi.application'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 DATABASES = config.DATABASES
+
+EMAIL_BACKEND = config.EMAIL['EMAIL_BACKEND']
+EMAIL_USE_TLS = config.EMAIL['EMAIL_USE_TLS']
+EMAIL_PORT = config.EMAIL['EMAIL_PORT']
+EMAIL_HOST = config.EMAIL['EMAIL_HOST']
+EMAIL_HOST_USER = config.EMAIL['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD = config.EMAIL['EMAIL_HOST_PASSWORD']
+SERVER_EMAIL = config.EMAIL['SERVER_EMAIL']
 
 
 # Password validation
@@ -142,11 +150,11 @@ REST_FRAMEWORK = {
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
-    'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com' 
+    'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com'
 ]
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'http://ec2-3-34-73-102.ap-northeast-2.compute.amazonaws.com'
-] 
+]
 
 CORS_ALLOW_CREDENTIALS = True

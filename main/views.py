@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.utils.functional import empty
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
+from django.core.mail import EmailMessage
 
 from rest_framework import generics
 
@@ -13,13 +14,12 @@ import bcrypt
 import re
 import datetime
 import jwt
-import datetime
 import ast
-
+import string
+import secrets
 
 from main.models import Participant, Project, Schedule, Todo, User, Member, Notification
 from config import SECRET_KEY
-from main.serializer import ProjectSerializer
 
 # Create your views here.
 
@@ -58,11 +58,11 @@ class SignUp(View):
                 return JsonResponse({'message': 'ID 중복 확인을 수행하세요.'}, status=210)
 
             # 비밀번호 재입력 불일치
-            if data['password'] != data['password_check']:
+            elif data['password'] != data['password_check']:
                 return JsonResponse({'message': '비밀번호가 일치하지 않습니다.'}, status=210)
 
             # 이메일 중복
-            if User.objects.filter(email=data['email']).exists():
+            elif User.objects.filter(email=data['email']).exists():
                 return JsonResponse({'message': '동일한 이메일로 가입한 회원이 존재합니다.'}, status=210)
 
             else:  # 이메일 형식 오류
@@ -157,24 +157,124 @@ class UserSearch(View):
 
 
 class Mypage(View):
-    def get(self, request):
-        user = request.GET.get('user', None)
+    def get(self, request, id):
         try:
-            userInformation = list(User.objects.filter(id=user).values(
-                'id', 'name', 'email', 'belong', 'img_url'))
+            userInformation = list(User.objects.filter(id=id).values(
+                'id', 'name', 'email', 'belong', 'img_url'))[0]
 
             # status 200
-            return JsonResponse({'information': userInformation[0]})
+            return JsonResponse({'information': userInformation})
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
 
-    def post(self, request):
-        return JsonResponse({'message': 'Invalid Value'}, status=500)
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            userInformation = User.objects.get(id=id)
 
+            userInformation.email = data['email']
+            userInformation.belong = data['belong']
+            userInformation.img_url = data['img_url']
+            userInformation.save()
+
+            return JsonResponse({'message': '유저 정보 수정 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class FindID(View):
+    def get(self, request):
+        try:
+            name, email = request.GET.get(
+                'name', None), request.GET.get('email', None)
+
+            if name == None or email == None:
+                return JsonResponse({'message': '입력하지 않은 필드가 존재합니다.'}, status=210)
+
+            elif User.objects.filter(name=name, email=email).exists():
+                id = User.objects.get(name=name, email=email).id
+                id = id[:-5] + '*****'
+
+                return JsonResponse({'id': id}, status=200)
+            else:
+                return JsonResponse({'message': '해당 사용자 정보가 존재하지 않습니다.'}, status=210)
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
+class ChangePassword(View):
+    def get(self, request):
+        try:
+            id, name, email = request.GET.get('id', None), request.GET.get(
+                'name', None), request.GET.get('email', None)
+
+            if id == None or name == None or email == None:
+                return JsonResponse({'message': '입력하지 않은 필드가 존재합니다.'}, status=210)
+
+            if User.objects.filter(id=id, name=name, email=email).exists():
+                user = User.objects.get(id=id, name=name, email=email)
+
+                subject = '[SSIS 비밀번호 찾기] ' + \
+                    user.name + ' 회원님의 임시 비밀번호입니다.'
+                string_pool = string.ascii_letters + string.digits
+                while True:
+                    temp_password = ''.join(secrets.choice(
+                        string_pool) for i in range(10))
+                    if (any(c.islower() for c in temp_password)
+                        and any(c.isupper() for c in temp_password)
+                            and sum(c.isdigit() for c in temp_password) >= 3):
+                        break
+                message = '요청하신 임시 비밀번호입니다.\n임시 비밀번호 : ' + \
+                    str(temp_password)+'\n해당 비밀번호로 로그인한 후 비밀번호 변경 후 사용하시길 바랍니다.'
+                mail = EmailMessage(subject, message, to=[user.email])
+                mail.send()
+
+                user.password = bcrypt.hashpw(message.encode(
+                    "UTF-8"), bcrypt.gensalt()).decode("UTF-8"),
+                return JsonResponse({'message': '임시 비밀번호 발급 성공'}, status=200)
+
+            else:
+                return JsonResponse({'message': '해당 사용자 정보가 존재하지 않습니다.'}, status=210)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+    def put(self, request, id):
+        try:
+            data = json.loads(request.body)
+            user = User.objects.get(id=id)
+
+            # 비밀번호 재입력 불일치
+            if data['password_change'] != data['password_check']:
+                return JsonResponse({'message': '변경할 비밀번호가 일치하지 않습니다.'}, status=210)
+
+            # 현재 비밀번호 불일치
+            elif bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
+                return JsonResponse({'message': '기존의 비밀번호가 일치하지 않습니다.'}, status=210)
+
+            else:
+                user.password = bcrypt.hashpw(data["password"].encode("UTF-8"),
+                                              bcrypt.gensalt()).decode("UTF-8")
+
+            return JsonResponse({'message': '비밀번호 변경 성공'}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 # 프로젝트
 # 프로젝트 생성, 목록
+
+
 class ProjectList(View):
     def get(self, request):
         id = request.GET.get('id', None)
