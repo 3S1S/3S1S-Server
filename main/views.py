@@ -900,8 +900,9 @@ class ToDoStateChange(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
-
 # Todo 댓글
+
+
 class CommentList(View):
     def get(self, request):
         reorder("Comment")
@@ -1131,7 +1132,21 @@ class FileList(View):
 
 class FileDetail(View):
     def get(self, request, id):
-        return JsonResponse({'message': 'Invalid Value'}, status=500)
+        reorder("File")
+
+        try:
+
+            files = list(File.objects.filter(id=id).values())
+            for file in files:
+                file['writer_name'] = User.objects.get(
+                    id=file['writer_id']).name + '(' + file['writer_id'] + ')'
+
+            return JsonResponse({'message': file})
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
 
     def put(self, request, id):
         try:
