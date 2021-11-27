@@ -13,6 +13,7 @@ urlpatterns = [
     path('users/findid', views.FindID.as_view()),
     path('users/<str:id>/changepw', views.ChangePassword.as_view()),
     path('mypage/<str:id>', views.Mypage.as_view()),
+
     # 프로젝트
     path('projects', views.ProjectList.as_view()),
     path('projects/<int:id>', views.ProjectDetail.as_view()),
@@ -25,6 +26,7 @@ urlpatterns = [
     path('members', views.MemberList.as_view()),
     path('members/delete', views.DeleteMember.as_view()),
     path('members/validcheck', views.CheckMember.as_view()),
+    path('members/authleader', views.AuthorizeLeader.as_view()),
 
     # 알림
     path('notifications', views.NotificationList.as_view()),
@@ -38,7 +40,6 @@ urlpatterns = [
     # comment
     path('comments', views.CommentList.as_view()),
     path('comments/<int:id>', views.CommentDetail.as_view()),
-
 
     # 일정
     path('schedules', views.ScheduleList.as_view()),
