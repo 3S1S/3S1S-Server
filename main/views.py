@@ -250,13 +250,18 @@ class ChangePassword(View):
     def put(self, request, id):
         try:
             data = json.loads(request.body)
-            user = User.objects.get(id=id)
+
+            # 필수항목 미입력
+            for key, val in data.items():
+                if val == "":
+                    return JsonResponse({'message': '입력하지 않은 필드가 존재합니다.'}, status=210)
 
             # 비밀번호 재입력 불일치
             if data['password_change'] != data['password_check']:
                 return JsonResponse({'message': '변경할 비밀번호가 일치하지 않습니다.'}, status=210)
 
-            # 현재 비밀번호 불일치
+            user = User.objects.get(id=id)
+            # 기존 비밀번호 불일치
             if not bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
                 return JsonResponse({'message': '기존의 비밀번호가 일치하지 않습니다.'}, status=210)
 
