@@ -1141,7 +1141,7 @@ class FileDetail(View):
                 file['writer_name'] = User.objects.get(
                     id=file['writer_id']).name + '(' + file['writer_id'] + ')'
 
-            return JsonResponse({'message': file})
+            return JsonResponse({'file': file})
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
