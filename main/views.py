@@ -982,17 +982,24 @@ class CommentDetail(View):
 
 
 class ScheduleList(View):
-    def get(self, request):
+    def get(self, request,):
         try:
-            project = request.GET.get('project', None)
-            schedules = list(Schedule.objects.filter(project=project).values())
+            project, type = request.GET.get(
+                'project', None), request.GET.get('type', 'calendar')
 
-            for schedule in schedules:
-                if schedule['start_date'] != schedule['end_date']:
-                    schedule['end_date'] += datetime.timedelta(days=1)
+            # 캘린더 타입 목록
+            if type == 'calendar':
+                schedules = list(Schedule.objects.filter(
+                    project=project).defer('project_id', 'writer').values())
+                for schedule in schedules:
+                    if schedule['start_date'] != schedule['end_date']:
+                        schedule['end_date'] += datetime.timedelta(days=1)
 
-                schedule['start'] = schedule.pop('start_date')
-                schedule['end'] = schedule.pop('end_date')
+                    schedule['start'] = schedule.pop('start_date')
+                    schedule['end'] = schedule.pop('end_date')
+            elif type == 'list':   # 리스트 타입 목록
+                schedules = list(Schedule.objects.filter(project=project, end_date__gte=datetime.date.today(
+                )).values('writer', 'title', 'description', 'start_date', 'end_date', 'color'))
 
             return JsonResponse({'schedule_list': schedules}, status=200)
 
@@ -1005,7 +1012,7 @@ class ScheduleList(View):
         try:
             data = json.loads(request.body)
 
-            for val in data.items():
+            for val in data.values():
                 if val == "":
                     return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
 
@@ -1049,7 +1056,7 @@ class ScheduleDetail(View):
             data = json.loads(request.body)
 
             # 필수항목 미입력
-            for key, val in data.items():
+            for val in data.values():
                 if val == "":
                     return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
 
