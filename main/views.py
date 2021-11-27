@@ -209,9 +209,9 @@ class FindID(View):
 
 
 class ChangePassword(View):
-    def get(self, request):
+    def get(self, request, id):
         try:
-            id, name, email = request.GET.get('id', None), request.GET.get(
+            name, email = request.GET.get(
                 'name', None), request.GET.get('email', None)
 
             if id == None or name == None or email == None:
@@ -257,12 +257,13 @@ class ChangePassword(View):
                 return JsonResponse({'message': '변경할 비밀번호가 일치하지 않습니다.'}, status=210)
 
             # 현재 비밀번호 불일치
-            elif bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
+            if not bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
                 return JsonResponse({'message': '기존의 비밀번호가 일치하지 않습니다.'}, status=210)
 
             else:
-                user.password = bcrypt.hashpw(data["password"].encode("UTF-8"),
+                user.password = bcrypt.hashpw(data["password_change"].encode("UTF-8"),
                                               bcrypt.gensalt()).decode("UTF-8")
+                user.save()
 
             return JsonResponse({'message': '비밀번호 변경 성공'}, status=200)
 
