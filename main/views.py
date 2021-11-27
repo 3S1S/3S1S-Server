@@ -192,7 +192,7 @@ class FindID(View):
             name, email = request.GET.get(
                 'name', None), request.GET.get('email', None)
 
-            if name == None or email == None:
+            if name == "" or email == "":
                 return JsonResponse({'message': '입력하지 않은 필드가 존재합니다.'}, status=210)
 
             elif User.objects.filter(name=name, email=email).exists():
