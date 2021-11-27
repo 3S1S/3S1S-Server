@@ -78,7 +78,7 @@ class File(models.Model):
     writer = models.ForeignKey('User', models.DO_NOTHING, db_column='writer')
     title = models.CharField(max_length=20)
     description = models.TextField()
-    file_name = models.CharField(max_length=20)
+    file_name = models.CharField(max_length=40)
     file_url = models.CharField(max_length=100)
     create_at = models.DateTimeField()
 
