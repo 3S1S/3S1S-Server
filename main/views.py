@@ -526,8 +526,31 @@ class CheckMember(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
+class AuthorizeLeader(View):
+    def put(self, request):
+        try:
+            data = json.loads(request.body)
+            leader = Member.objects.get(project=data['project'], leader=1)
+            leader_change = Member.objects.get(
+                project=data['project'], user=data['leader'])
+
+            leader.leader = 0
+            leader_change.leader = 1
+            leader.save()
+            leader_change.save()
+
+            return JsonResponse({"message": "리더 변경 성공"}, status=200)
+
+        except json.JSONDecodeError as e:
+            return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
+        except KeyError:
+            return JsonResponse({'message': 'Invalid Value'}, status=500)
+
+
 # 알림
 # 알림 생성
+
+
 class NotificationList(View):
     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.
     def get(self, request, *args, **kwargs):
