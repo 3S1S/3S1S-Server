@@ -1140,6 +1140,8 @@ class FileDetail(View):
             for file in files:
                 file['writer_name'] = User.objects.get(
                     id=file['writer_id']).name + '(' + file['writer_id'] + ')'
+                file['writer_name_only'] = User.objects.get(
+                    id=file['writer_id']).name
 
             return JsonResponse({'file': file})
 
