@@ -11,7 +11,7 @@ urlpatterns = [
     path('checkid', views.CheckID.as_view()),
     path('users/search', views.UserSearch.as_view()),
     path('users/findid', views.FindID.as_view()),
-    path('users/changepw', views.ChangePassword.as_view()),
+    path('users/<str:id>/changepw', views.ChangePassword.as_view()),
     path('mypage/<str:id>', views.Mypage.as_view()),
     # 프로젝트
     path('projects', views.ProjectList.as_view()),
