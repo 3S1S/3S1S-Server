@@ -223,7 +223,7 @@ class ChangePassword(View):
 
                 subject = '[SSIS 비밀번호 찾기] ' + \
                     user.name + ' 회원님의 임시 비밀번호입니다.'
-                string_pool = string.ascii_lowercase + string.digits
+                string_pool = string.ascii_letters + string.digits
                 while True:
                     temp_password = ''.join(secrets.choice(
                         string_pool) for i in range(10))
@@ -237,7 +237,7 @@ class ChangePassword(View):
                 mail = EmailMessage(subject, message, to=[user.email])
                 mail.send()
 
-                user.password = bcrypt.hashpw(message.encode(
+                user.password = bcrypt.hashpw(temp_password.encode(
                     "UTF-8"), bcrypt.gensalt()).decode("UTF-8")
                 user.save()
 
