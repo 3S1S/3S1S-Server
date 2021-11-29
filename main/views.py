@@ -228,7 +228,7 @@ class ChangePassword(View):
                     temp_password = ''.join(secrets.choice(
                         string_pool) for i in range(10))
                     if (any(c.islower() for c in temp_password)
-                        and any(c.isupper() for c in temp_password)
+                        # and any(c.isupper() for c in temp_password)
                             and sum(c.isdigit() for c in temp_password) >= 3):
                         break
                 message = '요청하신 임시 비밀번호입니다.\n임시 비밀번호 : ' + \
