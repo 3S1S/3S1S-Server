@@ -210,12 +210,12 @@ class FindID(View):
 
 
 class ChangePassword(View):
-    def get(self, request, id):
+    def get(self, request):
         try:
-            name, email = request.GET.get(
+            id, name, email = request.GET.get('id', None), request.GET.get(
                 'name', None), request.GET.get('email', None)
 
-            if id == None or name == None or email == None:
+            if id == "" or name == "" or email == "":
                 return JsonResponse({'message': '입력하지 않은 필드가 존재합니다.'}, status=210)
 
             if User.objects.filter(id=id, name=name, email=email).exists():
@@ -232,12 +232,15 @@ class ChangePassword(View):
                             and sum(c.isdigit() for c in temp_password) >= 3):
                         break
                 message = '요청하신 임시 비밀번호입니다.\n임시 비밀번호 : ' + \
-                    str(temp_password)+'\n해당 비밀번호로 로그인한 후 비밀번호 변경 후 사용하시길 바랍니다.'
+                    str(temp_password) + \
+                    '\n\n해당 비밀번호로 로그인한 후 비밀번호 변경 후 사용하시길 바랍니다.'
                 mail = EmailMessage(subject, message, to=[user.email])
                 mail.send()
 
                 user.password = bcrypt.hashpw(message.encode(
-                    "UTF-8"), bcrypt.gensalt()).decode("UTF-8"),
+                    "UTF-8"), bcrypt.gensalt()).decode("UTF-8")
+                user.save()
+
                 return JsonResponse({'message': '임시 비밀번호 발급 성공'}, status=200)
 
             else:
@@ -248,7 +251,7 @@ class ChangePassword(View):
         except KeyError:
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
-    def put(self, request, id):
+    def put(self, request):
         try:
             data = json.loads(request.body)
 
@@ -261,7 +264,7 @@ class ChangePassword(View):
             if data['password_change'] != data['password_check']:
                 return JsonResponse({'message': '변경할 비밀번호가 일치하지 않습니다.'}, status=210)
 
-            user = User.objects.get(id=id)
+            user = User.objects.get(id=data['id'])
             # 기존 비밀번호 불일치
             if not bcrypt.checkpw(data['password'].encode('UTF-8'), user.password.encode('UTF-8')):
                 return JsonResponse({'message': '기존의 비밀번호가 일치하지 않습니다.'}, status=210)
