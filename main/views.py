@@ -758,7 +758,10 @@ class ToDoDetail(View):
             todo.end_date = data['end_date']
             todo.save()
 
+            participants_id = []
             for participant in data['participants']:
+                participant = (parse.parse('{name}({id})', participant))['id']
+                participants_id.append(participant)
                 if not Participant.objects.filter(todo=id, user=participant).exists():
                     Participant.objects.create(
                         todo=todo,
@@ -767,8 +770,9 @@ class ToDoDetail(View):
 
             participants = list(
                 Participant.objects.filter(todo=id).values('user'))
+
             for participant in participants:
-                if not participant['user'] in data['participants']:
+                if not participant['user'] in participants_id:
                     Participant.objects.get(
                         todo=id, user=participant['user']).delete()
 
