@@ -17,6 +17,7 @@ import jwt
 import ast
 import string
 import secrets
+import parse
 
 from main.models import Participant, Project, Schedule, Todo, User, Member, Notification, Comment, File
 from config import SECRET_KEY
@@ -697,9 +698,10 @@ class ToDoList(View):
             created_todo.save()
 
             for participant in data['participants']:
+                user = parse.parse('{name}({id})', participant)
                 Participant.objects.create(
                     todo=created_todo,
-                    user=User.objects.get(id=participant)
+                    user=User.objects.get(id=user['id'])
                 ).save()
 
             return JsonResponse({'message': 'ToDo 생성 성공'}, status=201)
@@ -724,6 +726,7 @@ class ToDoDetail(View):
                 user_obj = User.objects.get(id=participant['user'])
                 user['id'] = user_obj.id
                 user['name'] = user_obj.name
+                user['name_id'] = user_obj.name+'('+user_obj.id+')'
                 user['profile_img'] = user_obj.img_url
                 participant_with_name.append(user)
             todo['participants'] = participant_with_name
