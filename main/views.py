@@ -228,7 +228,7 @@ class ChangePassword(View):
                     temp_password = ''.join(secrets.choice(
                         string_pool) for i in range(10))
                     if (any(c.islower() for c in temp_password)
-                        # and any(c.isupper() for c in temp_password)
+                        and any(c.isupper() for c in temp_password)
                             and sum(c.isdigit() for c in temp_password) >= 3):
                         break
                 message = '요청하신 임시 비밀번호입니다.\n임시 비밀번호 : ' + \
@@ -1009,8 +1009,14 @@ class ScheduleList(View):
                     schedule['start'] = schedule.pop('start_date')
                     schedule['end'] = schedule.pop('end_date')
             elif type == 'list':   # 리스트 타입 목록
-                schedules = list(Schedule.objects.filter(project=project, end_date__gte=datetime.date.today(
-                )).values('writer', 'title', 'description', 'start_date', 'end_date', 'color'))
+                schedules = list(Schedule.objects.filter(project=project).values(
+                    'writer', 'title', 'description', 'start_date', 'end_date', 'color'))
+
+                for schedule in schedules:
+                    if schedule['end_date'] >= datetime.date.today():
+                        schedule['is_end'] = True
+                    else:
+                        schedule['is_end'] = False
 
             return JsonResponse({'schedule_list': schedules}, status=200)
 
