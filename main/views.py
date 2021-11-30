@@ -22,24 +22,6 @@ import parse
 from main.models import Participant, Project, Schedule, Todo, User, Member, Notification, Comment, File
 from config import SECRET_KEY
 
-# Create your views here.
-
-
-def index(request):
-    return HttpResponse("Hello, world. You're at the polls index.")
-
-
-def reorder(object):
-    cur = connection.cursor()
-
-    cur.execute("ALTER TABLE " + object + " AUTO_INCREMENT=1")
-    cur.execute("SET @COUNT = 0")
-    cur.execute("UPDATE " + object + " SET id = @COUNT:=@COUNT+1")
-    cur.fetchall()
-
-    connection.commit()
-    connection.close()
-
 # 회원
 # 회원가입
 
@@ -287,9 +269,8 @@ class ChangePassword(View):
 
 class ProjectList(View):
     def get(self, request):
-        id = request.GET.get('id', None)
-
         try:
+            id = request.GET.get('id', None)
             project_list = list(Member.objects.filter(
                 user_id=id).values('project_id'))
 
@@ -470,7 +451,6 @@ class ProjectDetailMyTodo(View):
 class MemberList(View):
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.
     def get(self, request):
-        reorder("Member")
         project_id, showName = request.GET.get(
             'project', None), request.GET.get('showname', 'false')
 
@@ -557,8 +537,7 @@ class AuthorizeLeader(View):
 
 class NotificationList(View):
     # get 메소드 파라미터로 입력된 invitee의 알림을 모두 보여준다.
-    def get(self, request, *args, **kwargs):
-        reorder("Notification")
+    def get(self, request):
         invitee_id = request.GET.get('invitee', None)
 
         try:
@@ -639,10 +618,10 @@ class NotificationResponse(View):
 # ToDo 생성, 목록
 class ToDoList(View):
     def get(self, request):
-        project, state = request.GET.get(
-            'project', None), request.GET.get('state', None)
-
         try:
+            project, state = request.GET.get(
+                'project', None), request.GET.get('state', None)
+
             if int(state) < 2:
                 todos = list(Todo.objects.filter(
                     project=project, state=state).values().order_by('end_date'))
@@ -915,7 +894,6 @@ class ToDoStateChange(View):
 
 class CommentList(View):
     def get(self, request):
-        reorder("Comment")
         todo_id = request.GET.get('todo', None)
 
         try:
@@ -959,7 +937,6 @@ class CommentList(View):
 
 
 class CommentDetail(View):
-
     def put(self, request, id):
         try:
             data = json.loads(request.body)
@@ -1115,7 +1092,6 @@ class ScheduleDetail(View):
 
 class FileList(View):
     def get(self, request):
-        reorder("File")
         project_id = request.GET.get('project', None)
 
         try:
@@ -1132,7 +1108,7 @@ class FileList(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            data['create_at'] = str(datetime.date.now())
+            data['create_at'] = str(datetime.date.today())
 
             # 필수항목 미입력
             for val in data.values():
@@ -1158,7 +1134,6 @@ class FileList(View):
 
 class FileDetail(View):
     def get(self, request, id):
-        reorder("File")
 
         try:
             files = list(File.objects.filter(id=id).values())
@@ -1178,7 +1153,7 @@ class FileDetail(View):
     def put(self, request, id):
         try:
             data = json.loads(request.body)
-            data['create_at'] = str(datetime.date.now())
+            data['create_at'] = str(datetime.date.today())
 
             # 필수항목 미입력
             for val in data.values():
