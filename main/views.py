@@ -920,11 +920,14 @@ class CommentList(View):
 
         try:
             comments = list(Comment.objects.filter(todo=todo_id).values())
-            print(comments)
             for comment in comments:
-
+                print(str(comment['create_at']))
                 comment['writer_name'] = User.objects.get(
                     id=comment['writer_id']).name + '(' + comment['writer_id'] + ')'
+                created_at = parse.parse(
+                    '{date} {time}', str(comment['create_at']))
+                comment['create_at'] = created_at['date'] + \
+                    ' '+created_at['time'][:-3]
 
             return JsonResponse({'comments': list(comments)}, status=200)
 
@@ -1129,7 +1132,7 @@ class FileList(View):
     def post(self, request):
         try:
             data = json.loads(request.body)
-            data['create_at'] = str(datetime.datetime.now())
+            data['create_at'] = str(datetime.date.now())
 
             # 필수항목 미입력
             for val in data.values():
@@ -1158,7 +1161,6 @@ class FileDetail(View):
         reorder("File")
 
         try:
-
             files = list(File.objects.filter(id=id).values())
             for file in files:
                 file['writer_name'] = User.objects.get(
@@ -1176,17 +1178,12 @@ class FileDetail(View):
     def put(self, request, id):
         try:
             data = json.loads(request.body)
-            data['create_at'] = str(datetime.datetime.now())
+            data['create_at'] = str(datetime.date.now())
 
             # 필수항목 미입력
             for val in data.values():
                 if val == "":
                     return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
-
-            # # 필수항목 미입력
-            # for key, val in data.items():
-            #     if val == "" and key in ['title', 'team', 'description']:
-            #         return JsonResponse({'message': '필수 항목을 모두 입력하세요.'}, status=210)
 
             file = File.objects.get(id=id)
 
@@ -1195,7 +1192,6 @@ class FileDetail(View):
             file.file_name = data['file_name']
             file.file_url = data['file_url']
             file.create_at = data['create_at']
-
             file.save()
 
             return JsonResponse({'message': '파일 수정 성공'}, status=201)

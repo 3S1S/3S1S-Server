@@ -80,7 +80,7 @@ class File(models.Model):
     description = models.TextField()
     file_name = models.CharField(max_length=40)
     file_url = models.CharField(max_length=100)
-    create_at = models.DateTimeField()
+    create_at = models.DateField()
 
     class Meta:
         managed = False
