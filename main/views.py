@@ -451,18 +451,16 @@ class ProjectDetailMyTodo(View):
 class MemberList(View):
     # get 메소드 파라미터로 입력된 프로젝트의 멤버를 모두 보여준다.
     def get(self, request):
-        project_id, showName = request.GET.get(
-            'project', None), request.GET.get('showname', 'false')
-
+        project_id = request.GET.get(
+            'project', None)
         try:
             members = Member.objects.filter(project=project_id).values(
                 'user_id', 'leader', 'contribution_rate').order_by('-leader')
             for member in members:
                 member['profile_img'] = User.objects.get(
                     id=member['user_id']).img_url
-                if showName == 'true':
-                    member['name'] = User.objects.get(
-                        id=member['user_id']).name + '(' + member['user_id'] + ')'
+                member['name'] = User.objects.get(
+                    id=member['user_id']).name
 
             return JsonResponse({'members': list(members)}, status=200)
 
