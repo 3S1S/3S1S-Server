@@ -704,7 +704,7 @@ class ToDoList(View):
                     user=User.objects.get(id=user['id'])
                 ).save()
 
-            calRate(created_todo.id)
+            calRate(data['project'])
 
             return JsonResponse({'message': 'ToDo 생성 성공'}, status=201)
 
@@ -787,9 +787,9 @@ class ToDoDetail(View):
 
     def delete(self, request, id):
         try:
-            calRate(id)
-
+            project_id = Todo.objects.get(id=id).project.id
             Todo.objects.get(id=id).delete()
+            calRate(project_id)
             return JsonResponse({'message': 'Todo 삭제 성공'}, status=200)
 
         except json.JSONDecodeError as e:
@@ -798,9 +798,9 @@ class ToDoDetail(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
-def calRate(todo_id):
+def calRate(todo_project):
 
-    todo_project = Todo.objects.get(id=todo_id).project
+    # todo_project = Todo.objects.get(id=todo_id).project
     member_list = Member.objects.filter(
         project=todo_project).values('user')
     member_list = [d['user'] for d in member_list]
@@ -856,7 +856,7 @@ def calRate(todo_id):
         state=0, project=todo_project).values('id')
     pre_todo = [d['id'] for d in pre_todo]
 
-    project_instance = Project.objects.get(id=todo_project.id)
+    project_instance = Project.objects.get(id=todo_project)
 
     total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
     comp_prog = len(complete_todo)
@@ -883,8 +883,8 @@ class ToDoStateChange(View):
             # 시작전 -> 진행중
             todo_instance.state = data['state']
             todo_instance.save()
-
-            calRate(data['todo'])
+            todo_project = Todo.objects.get(id=data['todo']).project.id
+            calRate(todo_project)
 
             # # <<기여도 계산>>
             # # 이 프로젝트에서 Todo 완료한 participant id (user id X)
