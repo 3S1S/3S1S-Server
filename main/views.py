@@ -643,7 +643,7 @@ class ToDoList(View):
                     past_todos = list(Todo.objects.filter(
                         project=project, state=state, end_date__lt=datetime.date.today()).values().order_by('-end_date'))
                     for past_todo in past_todos:
-                        past_todo['color'] = 'gray'
+                        past_todo['color'] = '#e3e6e8'
                     todos += past_todos
 
             for todo in todos:
