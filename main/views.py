@@ -481,7 +481,7 @@ class DeleteMember(View):
 
             if user.leader == 1:
                 if Member.objects.filter(project=data['project']).count() > 1:
-                    return JsonResponse({'message': '팀장은 프로젝트를 탈퇴할 수 없습니다.\n 탈퇴를 원하실 경우 다른 팀원에게 팀장을 위임한 후 시도하세요.'}, status=210)
+                    return JsonResponse({'message': '팀장은 프로젝트를 탈퇴할 수 없습니다.\n탈퇴를 원하실 경우 다른 팀원에게 팀장을 위임한 후 시도하세요.'}, status=210)
 
             user.delete()
 
@@ -632,12 +632,19 @@ class ToDoList(View):
             if int(state) < 2:
                 todos = list(Todo.objects.filter(
                     project=project, state=state).values().order_by('end_date'))
+
             else:
                 todos = list(Todo.objects.filter(
                     project=project, state=state, end_date__gte=datetime.date.today()).values().order_by('end_date'))
+                for todo in todos:
+                    todo['color'] = 'white'
+
                 if ispast == 'true':
-                    todos += list(Todo.objects.filter(
+                    past_todos = list(Todo.objects.filter(
                         project=project, state=state, end_date__lt=datetime.date.today()).values().order_by('-end_date'))
+                    for past_todo in past_todos:
+                        past_todo['color'] = 'gray'
+                    todos += past_todos
 
             for todo in todos:
                 todo['id'] = str(todo['id'])
