@@ -704,7 +704,7 @@ class ToDoList(View):
                     user=User.objects.get(id=user['id'])
                 ).save()
 
-            calRate(created_todo.id)
+            calRate(data['project'])
 
             return JsonResponse({'message': 'ToDo 생성 성공'}, status=201)
 
@@ -787,9 +787,9 @@ class ToDoDetail(View):
 
     def delete(self, request, id):
         try:
-            calRate(id)
-
+            project_id = Todo.objects.get(id=id).project.id
             Todo.objects.get(id=id).delete()
+            calRate(project_id)
             return JsonResponse({'message': 'Todo 삭제 성공'}, status=200)
 
         except json.JSONDecodeError as e:
@@ -798,9 +798,8 @@ class ToDoDetail(View):
             return JsonResponse({'message': 'Invalid Value'}, status=500)
 
 
-def calRate(todo_id):
+def calRate(todo_project):
 
-    todo_project = Todo.objects.get(id=todo_id).project
     member_list = Member.objects.filter(
         project=todo_project).values('user')
     member_list = [d['user'] for d in member_list]
@@ -856,7 +855,7 @@ def calRate(todo_id):
         state=0, project=todo_project).values('id')
     pre_todo = [d['id'] for d in pre_todo]
 
-    project_instance = Project.objects.get(id=todo_project.id)
+    project_instance = Project.objects.get(id=todo_project)
 
     total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
     comp_prog = len(complete_todo)
@@ -874,77 +873,10 @@ class ToDoStateChange(View):
 
             todo_instance = Todo.objects.get(id=data['todo'])
 
-            # todo_project = Todo.objects.get(id=data['todo']).project
-
-            # member_list = Member.objects.filter(
-            #     project=todo_project).values('user')
-            # member_list = [d['user'] for d in member_list]
-
-            # 시작전 -> 진행중
             todo_instance.state = data['state']
             todo_instance.save()
-
-            calRate(data['todo'])
-
-            # # <<기여도 계산>>
-            # # 이 프로젝트에서 Todo 완료한 participant id (user id X)
-            # total_participants = Todo.objects.filter(
-            #     state=2, project=todo_project).values('participant')
-            # total_participants = [d['participant']
-            #                       for d in total_participants]
-
-            # if len(total_participants) > 1:
-            #     total_participants.pop()
-
-            # # 새로 기여도를 계산 하기위해 초기화하여 저장
-            # for z in range(len(member_list)):
-            #     zero = Member.objects.get(
-            #         user=member_list[z], project=todo_project)
-            #     zero.contribution_rate = 0
-            #     zero.save()
-
-            # # 기여도를 게산 하여 저장
-            # for n in range(len(member_list)):
-            #     for m in range(len(total_participants)):
-            #         participants_id = Participant.objects.get(
-            #             id=total_participants[m]).user.id
-
-            #         member_id = member_list[n]
-
-            #         if participants_id == member_id:
-            #             member_new_rate = Member.objects.get(
-            #                 user=member_list[n], project=todo_project)
-            #             member_new_rate.contribution_rate += 1.0
-            #             member_new_rate.save()
-            #     member_rate = Member.objects.get(
-            #         user=member_list[n], project=todo_project)
-            #     member_rate.contribution_rate = member_rate.contribution_rate / \
-            #         (len(total_participants) + 0.0001)
-            #     temp = member_rate.contribution_rate
-            #     member_rate.contribution_rate = round(temp, 2)*100
-            #     member_rate.save()
-
-            # # <<진행율 계산>>
-            # complete_todo = Todo.objects.filter(
-            #     state=2, project=todo_project).values('id')
-            # complete_todo = [d['id'] for d in complete_todo]
-
-            # ing_todo = Todo.objects.filter(
-            #     state=1, project=todo_project).values('id')
-            # ing_todo = [d['id'] for d in ing_todo]
-
-            # pre_todo = Todo.objects.filter(
-            #     state=0, project=todo_project).values('id')
-            # pre_todo = [d['id'] for d in pre_todo]
-
-            # project_instance = Project.objects.get(id=todo_project.id)
-
-            # total_prog = len(complete_todo) + len(ing_todo) + len(pre_todo)
-            # comp_prog = len(complete_todo)
-
-            # project_instance.progress_rate = round(
-            #     (comp_prog / total_prog), 2) * 100
-            # project_instance.save()
+            todo_project = Todo.objects.get(id=data['todo']).project.id
+            calRate(todo_project)
 
             return JsonResponse({'message': ""})
 
