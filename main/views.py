@@ -409,7 +409,7 @@ class ProjectDetailInDeadline(View):
             for todo in todos:
                 d_day = abs((datetime.date.today() - todo['end_date']).days)
                 if d_day <= 3:
-                    d_day = " - " + str(d_day) if d_day != 0 else 'Day'
+                    d_day = " - " + (str(d_day) if d_day != 0 else 'Day')
                     todo['d_day'] = "D" + d_day
                     inDeadline.append(todo)
 
@@ -433,7 +433,7 @@ class ProjectDetailMyTodo(View):
                 if Participant.objects.filter(todo=todo['id'], user=user).values('user').exists():
                     d_day = abs(
                         (datetime.date.today() - todo['end_date']).days)
-                    d_day = " - " + str(d_day) if d_day != 0 else 'Day'
+                    d_day = " - " + (str(d_day) if d_day != 0 else 'Day')
                     todo['d_day'] = "D" + d_day
                     MyTodo.append(todo)
 
@@ -646,6 +646,7 @@ class ToDoList(View):
                     user_obj = User.objects.get(id=participant['user'])
                     user['id'] = user_obj.id
                     user['name'] = user_obj.name
+                    user['img_url'] = user_obj.img_url
                     participant_with_name.append(user)
                 todo['participants'] = participant_with_name
 
