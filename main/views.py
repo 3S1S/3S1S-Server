@@ -64,7 +64,7 @@ class SignUp(View):
                 img_url='/img/blank-person.png'
             ).save()
 
-            return JsonResponse({'message': '회원가입 성공'}, status=210)
+            return JsonResponse({'message': '회원가입 성공'}, status=201)
 
         except json.JSONDecodeError as e:
             return JsonResponse({'message': f'Json_ERROR:{e}'}, status=500)
@@ -970,7 +970,7 @@ class CommentDetail(View):
 
 
 class ScheduleList(View):
-    def get(self, request,):
+    def get(self, request):
         try:
             project, type = request.GET.get(
                 'project', None), request.GET.get('type', 'calendar')
@@ -987,7 +987,7 @@ class ScheduleList(View):
                     schedule['end'] = schedule.pop('end_date')
             elif type == 'list':   # 리스트 타입 목록
                 schedules = list(Schedule.objects.filter(
-                    project=project).values())
+                    project=project).values().order_by('-end_date'))
 
                 for schedule in schedules:
                     if schedule['end_date'] >= datetime.date.today():
