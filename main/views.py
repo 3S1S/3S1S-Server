@@ -987,7 +987,7 @@ class ScheduleList(View):
                     schedule['end'] = schedule.pop('end_date')
             elif type == 'list':   # 리스트 타입 목록
                 schedules = list(Schedule.objects.filter(
-                    project=project).values().order_by('-end_date'))
+                    project=project).values().order_by('end_date'))
 
                 for schedule in schedules:
                     if schedule['end_date'] >= datetime.date.today():
