@@ -224,7 +224,7 @@ class ChangePassword(View):
                     "UTF-8"), bcrypt.gensalt()).decode("UTF-8")
                 user.save()
 
-                return JsonResponse({'message': '임시 비밀번호 발급 성공'}, status=200)
+                return JsonResponse({'message': '입력하신 이메일(' + user.email + ')로\n임시 비밀번호가 발급되었습니다.'}, status=200)
 
             else:
                 return JsonResponse({'message': '해당 사용자 정보가 존재하지 않습니다.'}, status=210)
