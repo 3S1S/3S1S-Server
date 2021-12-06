@@ -60,7 +60,8 @@ class SignUp(View):
                     "UTF-8"), bcrypt.gensalt()).decode("UTF-8"),
                 name=data['name'],
                 email=data['email'],
-                belong=data['belong']
+                belong=data['belong'],
+                img_url='/img/blank-person.png'
             ).save()
 
             return JsonResponse({'message': '회원가입 성공'}, status=210)
